@@ -23,6 +23,8 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
       roadmap: {
         include: { weeks: { include: { tasks: true }, orderBy: { weekNumber: "asc" } } },
       },
+      evidenceItems: { orderBy: { createdAt: "desc" } },
+      readinessSnapshots: { orderBy: { createdAt: "asc" } },
     },
   });
 

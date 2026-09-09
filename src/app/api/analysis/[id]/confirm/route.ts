@@ -4,8 +4,8 @@ import { prisma } from "@/lib/db/prisma";
 import { getOwnedAnalysis } from "@/lib/db/analysis";
 import { getRoleTemplate } from "@/lib/roles";
 import { confirmSkillsSchema } from "@/lib/validation/analysis";
-import { matchSkills, normalizeSkillName } from "@/lib/scoring/matching";
-import { calculateReadinessScore, buildPrioritizedGaps } from "@/lib/scoring/engine";
+import { normalizeSkillName } from "@/lib/scoring/matching";
+import { persistScoreResults } from "@/lib/scoring/persist";
 
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { userId } = await auth();
@@ -47,8 +47,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     }),
   ]);
 
-  // Deterministic matching + scoring — never delegated to the LLM.
-  const matched = matchSkills({
+  const { matched, scoreBreakdown, gaps, projectPicks } = await persistScoreResults({
+    analysisId: id,
     role,
     candidateSkills: includedSkills.map((s) => ({
       name: s.name,
@@ -61,52 +61,28 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       name: r.name,
       canonicalName: r.canonicalName,
       category: r.category.toLowerCase() as "technical" | "tool" | "soft",
-      priority: r.priority.toLowerCase().replace("nice_to_have", "nice_to_have") as
-        | "critical"
-        | "important"
-        | "nice_to_have",
+      priority: r.priority.toLowerCase() as "critical" | "important" | "nice_to_have",
       evidence: (r.evidence as string[]) ?? [],
     })),
+    nextStatus: "SCORED",
   });
 
-  const scoreBreakdown = calculateReadinessScore(matched);
-  const gaps = buildPrioritizedGaps({ role, requirements: matched });
-
-  const projectPicks = pickProjectRecommendations(role, gaps.map((g) => g.skillName));
-
-  await prisma.$transaction([
-    prisma.skillGap.deleteMany({ where: { analysisId: id } }),
-    prisma.skillGap.createMany({
-      data: gaps.map((g) => ({
-        analysisId: id,
-        skillName: g.skillName,
-        canonicalName: g.skillName,
-        priority: g.priority.toUpperCase() as "CRITICAL" | "IMPORTANT" | "NICE_TO_HAVE",
-        reason: g.reason,
-        suggestedProof: g.suggestedProof,
-        estimatedHours: g.estimatedHours,
-      })),
-    }),
-    prisma.projectRecommendation.deleteMany({ where: { analysisId: id } }),
-    prisma.projectRecommendation.createMany({
-      data: projectPicks.map((p) => ({
-        analysisId: id,
-        title: p.title,
-        description: p.description,
-        requiredSkills: p.requiredSkills,
-        deliverables: p.deliverables,
-        githubChecklist: p.githubChecklist,
-      })),
-    }),
-    prisma.analysis.update({
-      where: { id },
+  // Baseline snapshot for the Evidence Timeline — one per analysis, captured
+  // the first time it's scored. Confirming again (re-reviewing skills before
+  // ever generating a roadmap) should not create a second baseline.
+  const existingBaseline = await prisma.readinessSnapshot.findFirst({
+    where: { analysisId: id, kind: "BASELINE" },
+  });
+  if (!existingBaseline) {
+    await prisma.readinessSnapshot.create({
       data: {
-        status: "SCORED",
+        analysisId: id,
+        kind: "BASELINE",
         readinessScore: scoreBreakdown.readinessScore,
         scoreBreakdown: scoreBreakdown as unknown as object,
       },
-    }),
-  ]);
+    });
+  }
 
   return NextResponse.json({
     readinessScore: scoreBreakdown.readinessScore,
@@ -115,15 +91,4 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     gaps,
     projects: projectPicks,
   });
-}
-
-function pickProjectRecommendations(role: ReturnType<typeof getRoleTemplate>, gapSkillNames: string[]) {
-  const scored = role.projects.map((project) => {
-    const overlap = project.requiredSkills.filter((s) =>
-      gapSkillNames.some((g) => g.toLowerCase() === s.toLowerCase())
-    ).length;
-    return { project, overlap };
-  });
-  scored.sort((a, b) => b.overlap - a.overlap);
-  return scored.slice(0, 1).map((s) => s.project);
 }

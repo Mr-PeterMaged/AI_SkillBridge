@@ -3,25 +3,19 @@
 import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Check, Clock, ExternalLink, Link2, Target, Trophy } from "lucide-react";
+import { Check, Clock, ExternalLink, FilePlus2, Target, Trophy } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { AnalysisSkeleton } from "@/components/analysis/analysis-skeleton";
 import { EmptyNotice } from "@/components/analysis/empty-notice";
+import { AddProofDialog } from "@/components/analysis/add-proof-dialog";
 import { isSafeHttpUrl } from "@/lib/security/url";
+import { evidenceStatusForTask, EVIDENCE_STATUS_LABEL, EVIDENCE_STATUS_CLASS } from "@/lib/evidence-status";
 import { getRoleTemplate } from "@/lib/roles";
-import { AnalysisDTO, RoadmapTaskDTO, RoadmapWeekDTO } from "@/lib/types/analysis";
+import { AnalysisDTO, EvidenceItemDTO, RoadmapTaskDTO, RoadmapWeekDTO } from "@/lib/types/analysis";
 
 export default function RoadmapPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -66,6 +60,10 @@ export default function RoadmapPage({ params }: { params: Promise<{ id: string }
     });
   }
 
+  function addEvidenceLocal(evidence: EvidenceItemDTO) {
+    setAnalysis((prev) => (prev ? { ...prev, evidenceItems: [evidence, ...prev.evidenceItems] } : prev));
+  }
+
   if (loading) return <AnalysisSkeleton />;
 
   if (notFound || !analysis) {
@@ -95,6 +93,13 @@ export default function RoadmapPage({ params }: { params: Promise<{ id: string }
   const completed = allTasks.filter((t) => t.status === "COMPLETE").length;
   const progressPct = allTasks.length ? Math.round((completed / allTasks.length) * 100) : 0;
   const isDone = allTasks.length > 0 && completed === allTasks.length;
+
+  const provableSkillNames = Array.from(
+    new Set([
+      ...analysis.candidateSkills.map((s) => s.canonicalName),
+      ...analysis.skillGaps.map((g) => g.skillName),
+    ])
+  );
 
   return (
     <div className="mx-auto max-w-3xl space-y-8 pb-16">
@@ -130,7 +135,14 @@ export default function RoadmapPage({ params }: { params: Promise<{ id: string }
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: Math.min(i * 0.08, 0.4), ease: [0.16, 1, 0.3, 1] }}
           >
-            <WeekCard analysisId={id} week={week} onUpdateTask={updateTaskLocal} />
+            <WeekCard
+              analysisId={id}
+              week={week}
+              evidenceItems={analysis.evidenceItems}
+              provableSkillNames={provableSkillNames}
+              onUpdateTask={updateTaskLocal}
+              onAddEvidence={addEvidenceLocal}
+            />
           </motion.div>
         ))}
       </div>
@@ -147,11 +159,17 @@ export default function RoadmapPage({ params }: { params: Promise<{ id: string }
 function WeekCard({
   analysisId,
   week,
+  evidenceItems,
+  provableSkillNames,
   onUpdateTask,
+  onAddEvidence,
 }: {
   analysisId: string;
   week: RoadmapWeekDTO;
+  evidenceItems: EvidenceItemDTO[];
+  provableSkillNames: string[];
   onUpdateTask: (taskId: string, patch: Partial<RoadmapTaskDTO>) => void;
+  onAddEvidence: (evidence: EvidenceItemDTO) => void;
 }) {
   const completed = week.tasks.filter((t) => t.status === "COMPLETE").length;
   const weekDone = week.tasks.length > 0 && completed === week.tasks.length;
@@ -213,7 +231,15 @@ function WeekCard({
         </p>
         <div className="space-y-3">
           {week.tasks.map((task) => (
-            <TaskRow key={task.id} analysisId={analysisId} task={task} onUpdate={onUpdateTask} />
+            <TaskRow
+              key={task.id}
+              analysisId={analysisId}
+              task={task}
+              evidenceItems={evidenceItems}
+              provableSkillNames={provableSkillNames}
+              onUpdate={onUpdateTask}
+              onAddEvidence={onAddEvidence}
+            />
           ))}
         </div>
       </div>
@@ -224,23 +250,28 @@ function WeekCard({
 function TaskRow({
   analysisId,
   task,
+  evidenceItems,
+  provableSkillNames,
   onUpdate,
+  onAddEvidence,
 }: {
   analysisId: string;
   task: RoadmapTaskDTO;
+  evidenceItems: EvidenceItemDTO[];
+  provableSkillNames: string[];
   onUpdate: (taskId: string, patch: Partial<RoadmapTaskDTO>) => void;
+  onAddEvidence: (evidence: EvidenceItemDTO) => void;
 }) {
   const [saving, setSaving] = useState(false);
-  const [evidenceUrl, setEvidenceUrl] = useState(task.evidenceUrl ?? "");
-  const [evidenceType, setEvidenceType] = useState(task.evidenceType ?? "GITHUB");
 
-  async function patchTask(patch: Record<string, unknown>) {
+  async function toggleComplete() {
     setSaving(true);
     try {
+      const nextStatus = task.status === "COMPLETE" ? "PENDING" : "COMPLETE";
       const res = await fetch(`/api/analysis/${analysisId}/tasks/${task.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(patch),
+        body: JSON.stringify({ status: nextStatus }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -248,26 +279,15 @@ function TaskRow({
         return;
       }
       onUpdate(task.id, data.task);
-      if (patch.status === "COMPLETE") toast.success("Task marked complete.");
-      if (patch.evidenceUrl) toast.success("Evidence saved.");
+      if (nextStatus === "COMPLETE") toast.success("Task marked complete.");
     } finally {
       setSaving(false);
     }
   }
 
-  function toggleComplete() {
-    patchTask({ status: task.status === "COMPLETE" ? "PENDING" : "COMPLETE" });
-  }
-
-  function saveEvidence() {
-    if (evidenceUrl && !/^https?:\/\//.test(evidenceUrl)) {
-      toast.error("Evidence link must be a valid URL starting with http(s)://");
-      return;
-    }
-    patchTask({ evidenceUrl: evidenceUrl || null, evidenceType: evidenceUrl ? evidenceType : null });
-  }
-
   const isComplete = task.status === "COMPLETE";
+  const linkedEvidence = evidenceItems.filter((e) => e.roadmapTaskId === task.id);
+  const status = evidenceStatusForTask(task, evidenceItems);
 
   return (
     <div className={`rounded-xl border p-3.5 transition-colors ${isComplete ? "border-matched/25 bg-matched/[0.03]" : "border-border/70 bg-card"}`}>
@@ -295,43 +315,46 @@ function TaskRow({
           </AnimatePresence>
         </button>
         <div className="flex-1">
-          <p className={`text-sm font-medium ${isComplete ? "text-muted-foreground line-through" : ""}`}>
-            {task.title}
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className={`text-sm font-medium ${isComplete ? "text-muted-foreground line-through" : ""}`}>
+              {task.title}
+            </p>
+            <Badge className={`font-normal ${EVIDENCE_STATUS_CLASS[status]}`}>{EVIDENCE_STATUS_LABEL[status]}</Badge>
+          </div>
           <p className="mt-0.5 text-xs text-muted-foreground">{task.description}</p>
 
-          <div className="mt-2.5 flex flex-wrap items-center gap-2">
-            <Select value={evidenceType} onValueChange={(v) => setEvidenceType(v as typeof evidenceType)}>
-              <SelectTrigger className="h-8 w-[130px] text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="GITHUB">GitHub repo</SelectItem>
-                <SelectItem value="DEMO_URL">Live demo</SelectItem>
-                <SelectItem value="PORTFOLIO_URL">Portfolio</SelectItem>
-                <SelectItem value="CASE_STUDY">Case study</SelectItem>
-              </SelectContent>
-            </Select>
-            <Input
-              placeholder="https://…"
-              value={evidenceUrl}
-              onChange={(e) => setEvidenceUrl(e.target.value)}
-              className="h-8 flex-1 text-xs"
-            />
-            <Button type="button" size="sm" variant="outline" onClick={saveEvidence} disabled={saving} className="h-8 gap-1.5">
-              <Link2 className="h-3.5 w-3.5" /> Save
-            </Button>
-          </div>
-          {task.evidenceUrl && isSafeHttpUrl(task.evidenceUrl) && (
-            <a
-              href={task.evidenceUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-2 flex w-fit items-center gap-1 text-xs text-matched underline-offset-2 hover:underline"
-            >
-              <ExternalLink className="h-3 w-3" /> Evidence link saved
-            </a>
+          {linkedEvidence.length > 0 && (
+            <ul className="mt-2 space-y-1">
+              {linkedEvidence.map((e) => (
+                <li key={e.id} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Check className="h-3 w-3 shrink-0 text-matched" />
+                  {e.url && isSafeHttpUrl(e.url) ? (
+                    <a href={e.url} target="_blank" rel="noreferrer" className="text-matched underline-offset-2 hover:underline">
+                      {e.url}
+                    </a>
+                  ) : (
+                    <span>Reflection added</span>
+                  )}
+                  {e.provesSkills.length > 0 && (
+                    <span className="text-muted-foreground">— proves {e.provesSkills.join(", ")}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
           )}
+
+          <div className="mt-2.5">
+            <AddProofDialog
+              analysisId={analysisId}
+              roadmapTaskId={task.id}
+              candidateSkillNames={provableSkillNames}
+              onCreated={onAddEvidence}
+            >
+              <Button type="button" size="sm" variant="outline" className="h-8 gap-1.5">
+                <FilePlus2 className="h-3.5 w-3.5" /> Add proof
+              </Button>
+            </AddProofDialog>
+          </div>
         </div>
       </div>
     </div>

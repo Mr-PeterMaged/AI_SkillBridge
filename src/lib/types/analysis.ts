@@ -66,6 +66,26 @@ export type RoadmapDTO = {
   weeks: RoadmapWeekDTO[];
 };
 
+export type EvidenceItemDTO = {
+  id: string;
+  roadmapTaskId: string | null;
+  type: "GITHUB" | "DEMO_URL" | "PORTFOLIO_URL" | "CASE_STUDY" | "NOTE";
+  url: string | null;
+  reflectionBuilt: string | null;
+  reflectionLearned: string | null;
+  provesSkills: string[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ReadinessSnapshotDTO = {
+  id: string;
+  kind: "BASELINE" | "REASSESSMENT";
+  readinessScore: number;
+  scoreBreakdown: AnalysisDTO["scoreBreakdown"];
+  createdAt: string;
+};
+
 export type MatchedRequirementDTO = {
   canonicalName: string;
   priority: "critical" | "important" | "nice_to_have";
@@ -99,4 +119,6 @@ export type AnalysisDTO = {
   skillGaps: SkillGapDTO[];
   projectRecommendations: ProjectRecommendationDTO[];
   roadmap: RoadmapDTO | null;
+  evidenceItems: EvidenceItemDTO[];
+  readinessSnapshots: ReadinessSnapshotDTO[];
 };

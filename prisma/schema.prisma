@@ -95,6 +95,8 @@ model Analysis {
   skillGaps        SkillGap[]
   roadmap          Roadmap?
   projectRecommendations ProjectRecommendation[]
+  evidenceItems      EvidenceItem[]
+  readinessSnapshots ReadinessSnapshot[]
 
   @@index([userId])
   @@index([userId, createdAt])
@@ -234,6 +236,8 @@ model RoadmapTask {
   evidenceType  EvidenceType?
   notes         String?       @db.Text
 
+  evidenceItems EvidenceItem[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -254,4 +258,56 @@ model ProjectRecommendation {
   createdAt DateTime @default(now())
 
   @@index([analysisId])
+}
+
+// ---------------------------------------------------------------
+// Phase 2 — Evidence & Reassessment.
+// EvidenceItem is deliberately NOT a "verification" record: it is
+// user-submitted proof (a link or a written reflection) that mentors
+// and employers can review. Whether it actually proves a skill is a
+// judgment call the user makes explicitly (provesSkills), never an
+// automatic AI inference — see the reassess route.
+// ---------------------------------------------------------------
+model EvidenceItem {
+  id            String        @id @default(cuid())
+  analysisId    String
+  analysis      Analysis      @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  roadmapTaskId String?
+  roadmapTask   RoadmapTask?  @relation(fields: [roadmapTaskId], references: [id], onDelete: SetNull)
+
+  type              EvidenceType
+  url               String?
+  reflectionBuilt   String?      @db.Text // "What did you build?"
+  reflectionLearned String?      @db.Text // "What did you learn?"
+  provesSkills      Json         @default("[]") // string[] canonical skill names the user says this proves
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([analysisId])
+  @@index([roadmapTaskId])
+}
+
+enum SnapshotKind {
+  BASELINE
+  REASSESSMENT
+}
+
+// A point-in-time copy of the deterministic score, so the Evidence
+// Timeline and "before/after" reassessment UI can render history
+// without recomputing anything retroactively.
+model ReadinessSnapshot {
+  id             String       @id @default(cuid())
+  analysisId     String
+  analysis       Analysis     @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  kind           SnapshotKind
+  readinessScore Int
+  scoreBreakdown Json
+
+  createdAt DateTime @default(now())
+
+  @@index([analysisId])
+  @@index([analysisId, createdAt])
 }

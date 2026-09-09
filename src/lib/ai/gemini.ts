@@ -31,7 +31,7 @@ function getClient(): GoogleGenAI {
   return client;
 }
 
-const MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const MODEL = process.env.GEMINI_MODEL || "gemini-flash-latest";
 
 /**
  * Calls Gemini with a strict JSON response schema and low temperature.

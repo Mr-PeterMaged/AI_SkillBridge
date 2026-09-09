@@ -12,6 +12,8 @@ import {
   Code2,
   Sparkles,
   AlertTriangle,
+  FilePlus2,
+  History,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -22,8 +24,11 @@ import { AnalysisSkeleton } from "@/components/analysis/analysis-skeleton";
 import { EmptyNotice } from "@/components/analysis/empty-notice";
 import { GapCard } from "@/components/analysis/gap-card";
 import { ScoreRing } from "@/components/analysis/score-ring";
+import { AddProofDialog } from "@/components/analysis/add-proof-dialog";
+import { ReassessPanel } from "@/components/analysis/reassess-panel";
+import { EvidenceTimeline } from "@/components/analysis/evidence-timeline";
 import { getRoleTemplate } from "@/lib/roles";
-import { AnalysisDTO, MatchedRequirementDTO } from "@/lib/types/analysis";
+import { AnalysisDTO, EvidenceItemDTO, MatchedRequirementDTO } from "@/lib/types/analysis";
 
 export default function ResultsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -38,7 +43,7 @@ export default function ResultsPage({ params }: { params: Promise<{ id: string }
 
   useEffect(() => {
     let cancelled = false;
-    async function load() {
+    (async () => {
       const res = await fetch(`/api/analysis/${id}`);
       const data = await res.json();
       if (cancelled) return;
@@ -51,12 +56,23 @@ export default function ResultsPage({ params }: { params: Promise<{ id: string }
       setAnalysis(data.analysis);
       setMatched(data.matchedRequirements ?? []);
       setLoading(false);
-    }
-    load();
+    })();
     return () => {
       cancelled = true;
     };
   }, [id]);
+
+  async function reloadAnalysis() {
+    const res = await fetch(`/api/analysis/${id}`);
+    const data = await res.json();
+    if (!res.ok) return;
+    setAnalysis(data.analysis);
+    setMatched(data.matchedRequirements ?? []);
+  }
+
+  function addEvidenceLocal(evidence: EvidenceItemDTO) {
+    setAnalysis((prev) => (prev ? { ...prev, evidenceItems: [evidence, ...prev.evidenceItems] } : prev));
+  }
 
   async function buildRoadmap() {
     setBuildingRoadmap(true);
@@ -106,6 +122,11 @@ export default function ResultsPage({ params }: { params: Promise<{ id: string }
   const missingSkills = matched.filter((m) => m.status === "missing");
   const topGaps = analysis.skillGaps.slice(0, 3);
   const remainingGapsCount = Math.max(analysis.skillGaps.length - topGaps.length, 0);
+  const provableSkillNames = Array.from(
+    new Set([...analysis.candidateSkills.map((s) => s.canonicalName), ...analysis.skillGaps.map((g) => g.skillName)])
+  );
+  const hasCompletedTask = (analysis.roadmap?.weeks ?? []).some((w) => w.tasks.some((t) => t.status === "COMPLETE"));
+  const hasEvidence = analysis.evidenceItems.length > 0;
 
   function evidenceQuoteFor(skillName: string) {
     const req = analysis!.jobRequirements.find(
@@ -190,6 +211,15 @@ export default function ResultsPage({ params }: { params: Promise<{ id: string }
               </span>
               Top priority gaps
             </h2>
+            <AddProofDialog
+              analysisId={id}
+              candidateSkillNames={provableSkillNames}
+              onCreated={addEvidenceLocal}
+            >
+              <Button type="button" variant="outline" size="sm" className="gap-1.5">
+                <FilePlus2 className="h-3.5 w-3.5" /> Add proof
+              </Button>
+            </AddProofDialog>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             {topGaps.map((g) => (
@@ -297,6 +327,31 @@ export default function ResultsPage({ params }: { params: Promise<{ id: string }
           </div>
         )}
       </section>
+
+      {/* Reassessment */}
+      <section>
+        <ReassessPanel
+          analysisId={id}
+          eligible={hasCompletedTask || hasEvidence}
+          ineligibleReason="Complete a roadmap task or add proof above to unlock reassessment."
+          onReassessed={reloadAnalysis}
+        />
+      </section>
+
+      {/* Evidence timeline */}
+      {(analysis.readinessSnapshots.length > 0 || analysis.evidenceItems.length > 0) && (
+        <section>
+          <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <History className="h-4 w-4" />
+            </span>
+            Evidence timeline
+          </h2>
+          <div className="rounded-xl border border-border bg-card p-5">
+            <EvidenceTimeline snapshots={analysis.readinessSnapshots} evidence={analysis.evidenceItems} />
+          </div>
+        </section>
+      )}
 
       {/* CTA */}
       <div className="flex flex-col items-center gap-2 border-t border-border pt-8">
