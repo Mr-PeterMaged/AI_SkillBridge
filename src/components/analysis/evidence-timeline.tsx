@@ -1,9 +1,10 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { Flag, FileCheck2, TrendingUp, Sparkles } from "lucide-react";
-import { EvidenceItemDTO, ReadinessSnapshotDTO } from "@/lib/types/analysis";
+import { ClipboardCheck, Flag, FileCheck2, MessageSquareText, TrendingUp, Sparkles } from "lucide-react";
+import { EvidenceItemDTO, QuizAttemptDTO, ReadinessSnapshotDTO, WeeklyCheckInDTO } from "@/lib/types/analysis";
 import { fadeUp, reducedVariants, staggerContainer } from "@/lib/animations";
+import { ResumeBulletDialog } from "@/components/analysis/resume-bullet-dialog";
 
 const EVIDENCE_TYPE_LABEL: Record<string, string> = {
   GITHUB: "GitHub repository added",
@@ -15,15 +16,23 @@ const EVIDENCE_TYPE_LABEL: Record<string, string> = {
 
 type TimelineNode =
   | { kind: "baseline"; date: string; score: number }
-  | { kind: "evidence"; date: string; label: string }
+  | { kind: "evidence"; date: string; label: string; evidence: EvidenceItemDTO }
+  | { kind: "check-in"; date: string; checkIn: WeeklyCheckInDTO }
+  | { kind: "quiz"; date: string; attempt: QuizAttemptDTO }
   | { kind: "reassessment"; date: string; score: number };
 
 export function EvidenceTimeline({
+  analysisId,
   snapshots,
   evidence,
+  checkIns = [],
+  quizAttempts = [],
 }: {
+  analysisId: string;
   snapshots: ReadinessSnapshotDTO[];
   evidence: EvidenceItemDTO[];
+  checkIns?: WeeklyCheckInDTO[];
+  quizAttempts?: QuizAttemptDTO[];
 }) {
   const shouldReduceMotion = useReducedMotion();
 
@@ -38,8 +47,11 @@ export function EvidenceTimeline({
         kind: "evidence",
         date: e.createdAt,
         label: EVIDENCE_TYPE_LABEL[e.type] ?? "Evidence added",
+        evidence: e,
       })
     ),
+    ...checkIns.map((checkIn): TimelineNode => ({ kind: "check-in", date: checkIn.createdAt, checkIn })),
+    ...quizAttempts.map((attempt): TimelineNode => ({ kind: "quiz", date: attempt.createdAt, attempt })),
   ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   if (nodes.length === 0) {
@@ -67,6 +79,10 @@ export function EvidenceTimeline({
             className={`absolute -left-6 top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full ring-4 ring-background ${
               node.kind === "reassessment"
                 ? "bg-ai"
+                : node.kind === "check-in"
+                  ? "bg-warning"
+                  : node.kind === "quiz"
+                    ? "bg-primary"
                 : node.kind === "baseline"
                   ? "bg-primary"
                   : "bg-matched"
@@ -88,10 +104,36 @@ export function EvidenceTimeline({
                 <TrendingUp className="h-3.5 w-3.5 text-ai" /> Reassessed: {node.score}%
               </>
             )}
+            {node.kind === "check-in" && (
+              <>
+                <MessageSquareText className="h-3.5 w-3.5 text-warning" /> Weekly check-in saved
+              </>
+            )}
+            {node.kind === "quiz" && (
+              <>
+                <ClipboardCheck className="h-3.5 w-3.5 text-primary" /> Quiz completed:{" "}
+                {node.attempt.skill.replaceAll("_", " ").toLowerCase()} ({node.attempt.score}/{node.attempt.total})
+              </>
+            )}
           </div>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {new Date(node.date).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
           </p>
+          {node.kind === "evidence" && (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {node.evidence.provesSkills.length > 0 && (
+                <p className="text-xs text-muted-foreground">Supports: {node.evidence.provesSkills.join(", ")}</p>
+              )}
+              <ResumeBulletDialog
+                analysisId={analysisId}
+                evidenceId={node.evidence.id}
+                existingBullets={node.evidence.resumeBullets ?? []}
+              />
+            </div>
+          )}
+          {node.kind === "check-in" && (
+            <p className="mt-1 text-xs text-muted-foreground">{node.checkIn.aiSuggestion}</p>
+          )}
         </motion.div>
       ))}
       <motion.div

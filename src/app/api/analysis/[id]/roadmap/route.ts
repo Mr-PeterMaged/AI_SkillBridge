@@ -6,7 +6,7 @@ import { getRoleTemplate } from "@/lib/roles";
 import { generateStructuredJSON } from "@/lib/ai/gemini";
 import { buildRoadmapPrompt, ROADMAP_RESPONSE_SCHEMA } from "@/lib/ai/prompts";
 import { roadmapGenerationResultSchema } from "@/lib/ai/schemas";
-import { WEEKLY_HOURS_NUMBER } from "@/lib/validation/analysis";
+import { ROADMAP_DURATION_BY_WEEKLY_HOURS, WEEKLY_HOURS_NUMBER } from "@/lib/validation/analysis";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
@@ -26,16 +26,39 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
   }
 
   const role = getRoleTemplate(analysis.targetRole);
-  const [gaps, candidateSkills] = await Promise.all([
+  const [gaps, candidateSkills, progressCount, evidenceCount] = await Promise.all([
     prisma.skillGap.findMany({ where: { analysisId: id }, orderBy: { priority: "asc" } }),
     prisma.candidateSkill.findMany({ where: { analysisId: id } }),
+    prisma.roadmapTask.count({
+      where: {
+        status: { not: "PENDING" },
+        roadmapWeek: { roadmap: { analysisId: id } },
+      },
+    }),
+    prisma.evidenceItem.count({ where: { analysisId: id } }),
   ]);
+
+  if (analysis.status === "ROADMAP_READY" && (progressCount > 0 || evidenceCount > 0)) {
+    const roadmap = await prisma.roadmap.findUnique({
+      where: { analysisId: id },
+      include: { weeks: { include: { tasks: true }, orderBy: { weekNumber: "asc" } } },
+    });
+    return NextResponse.json(
+      {
+        roadmap,
+        preserved: true,
+        message: "Your existing roadmap has progress or evidence, so SkillBridge did not erase it.",
+      },
+      { status: 409 }
+    );
+  }
 
   try {
     const prompt = buildRoadmapPrompt({
       role,
       experienceLevel: analysis.experienceLevel,
       weeklyHours: WEEKLY_HOURS_NUMBER[analysis.weeklyHours],
+      durationWeeks: ROADMAP_DURATION_BY_WEEKLY_HOURS[analysis.weeklyHours],
       priorityGaps: gaps.map((g) => ({ skill: g.skillName, priority: g.priority.toLowerCase(), reason: g.reason })),
       matchedSkills: candidateSkills.map((s) => s.canonicalName),
     });

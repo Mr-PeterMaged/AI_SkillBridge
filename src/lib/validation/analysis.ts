@@ -17,6 +17,13 @@ export const WEEKLY_HOURS_NUMBER: Record<z.infer<typeof weeklyHoursSchema>, numb
   H10_PLUS: 10,
 };
 
+export const ROADMAP_DURATION_BY_WEEKLY_HOURS: Record<z.infer<typeof weeklyHoursSchema>, number> = {
+  H3: 8,
+  H5: 6,
+  H8: 4,
+  H10_PLUS: 3,
+};
+
 export const createAnalysisSchema = z.object({
   targetRole: targetRoleSchema,
   experienceLevel: experienceLevelSchema,

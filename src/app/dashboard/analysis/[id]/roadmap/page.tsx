@@ -12,10 +12,19 @@ import { Progress } from "@/components/ui/progress";
 import { AnalysisSkeleton } from "@/components/analysis/analysis-skeleton";
 import { EmptyNotice } from "@/components/analysis/empty-notice";
 import { AddProofDialog } from "@/components/analysis/add-proof-dialog";
+import { ProjectBuilder } from "@/components/analysis/project-builder";
+import { WeeklyCheckInCard } from "@/components/roadmap/weekly-check-in-card";
 import { isSafeHttpUrl } from "@/lib/security/url";
 import { evidenceStatusForTask, EVIDENCE_STATUS_LABEL, EVIDENCE_STATUS_CLASS } from "@/lib/evidence-status";
 import { getRoleTemplate } from "@/lib/roles";
-import { AnalysisDTO, EvidenceItemDTO, RoadmapTaskDTO, RoadmapWeekDTO } from "@/lib/types/analysis";
+import {
+  AnalysisDTO,
+  EvidenceItemDTO,
+  ProjectRecommendationDTO,
+  RoadmapTaskDTO,
+  RoadmapWeekDTO,
+  WeeklyCheckInDTO,
+} from "@/lib/types/analysis";
 
 export default function RoadmapPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -64,6 +73,29 @@ export default function RoadmapPage({ params }: { params: Promise<{ id: string }
     setAnalysis((prev) => (prev ? { ...prev, evidenceItems: [evidence, ...prev.evidenceItems] } : prev));
   }
 
+  function addCheckInLocal(checkIn: WeeklyCheckInDTO) {
+    setAnalysis((prev) => (prev ? { ...prev, weeklyCheckIns: [checkIn, ...prev.weeklyCheckIns] } : prev));
+    if (checkIn.roadmapTaskId && checkIn.response === "COMPLETED") {
+      updateTaskLocal(checkIn.roadmapTaskId, { status: "COMPLETE", completedAt: new Date().toISOString() });
+    } else if (checkIn.roadmapTaskId && checkIn.response === "MADE_PROGRESS") {
+      updateTaskLocal(checkIn.roadmapTaskId, { status: "IN_PROGRESS" });
+    }
+  }
+
+  function updateProjectLocal(project: ProjectRecommendationDTO) {
+    setAnalysis((prev) =>
+      prev
+        ? {
+            ...prev,
+            projectRecommendations: [
+              project,
+              ...prev.projectRecommendations.filter((item) => item.id !== project.id && item.source !== "AI_GENERATED"),
+            ],
+          }
+        : prev
+    );
+  }
+
   if (loading) return <AnalysisSkeleton />;
 
   if (notFound || !analysis) {
@@ -93,6 +125,7 @@ export default function RoadmapPage({ params }: { params: Promise<{ id: string }
   const completed = allTasks.filter((t) => t.status === "COMPLETE").length;
   const progressPct = allTasks.length ? Math.round((completed / allTasks.length) * 100) : 0;
   const isDone = allTasks.length > 0 && completed === allTasks.length;
+  const nextTask = allTasks.find((task) => task.status !== "COMPLETE") ?? null;
 
   const provableSkillNames = Array.from(
     new Set([
@@ -111,6 +144,9 @@ export default function RoadmapPage({ params }: { params: Promise<{ id: string }
           <p className="text-sm font-medium text-muted-foreground">{role.label}</p>
         </div>
         <h1 className="mt-2 text-2xl font-semibold">Your {analysis.roadmap.durationWeeks}-Week Plan</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Based on your available time, this plan is designed for {analysis.roadmap.durationWeeks} weeks.
+        </p>
         <div className="mt-4 flex items-center gap-3">
           <Progress
             value={progressPct}
@@ -126,6 +162,23 @@ export default function RoadmapPage({ params }: { params: Promise<{ id: string }
           </p>
         )}
       </div>
+
+      <WeeklyCheckInCard
+        analysisId={id}
+        task={nextTask}
+        latestCheckIn={analysis.weeklyCheckIns[0]}
+        onCreated={addCheckInLocal}
+      />
+
+      <section>
+        <h2 className="mb-3 text-lg font-semibold">Build a project that proves your skills</h2>
+        <ProjectBuilder
+          analysisId={id}
+          project={analysis.projectRecommendations.find((p) => p.source === "AI_GENERATED") ?? analysis.projectRecommendations[0] ?? null}
+          hasRoadmap={Boolean(analysis.roadmap)}
+          onProjectChange={updateProjectLocal}
+        />
+      </section>
 
       <div className="space-y-6">
         {analysis.roadmap.weeks.map((week, i) => (

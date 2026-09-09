@@ -24,6 +24,7 @@ export async function PATCH(
   const updated = await prisma.evidenceItem.update({
     where: { id: evidenceId },
     data: parsed.data,
+    include: { resumeBullets: true },
   });
 
   return NextResponse.json({ evidence: updated });

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import {
@@ -76,8 +76,12 @@ export default function NewAnalysisPage() {
     mode: "onChange",
   });
 
-  const { register, watch, setValue, trigger, formState, handleSubmit } = form;
-  const targetRole = watch("targetRole");
+  const { register, control, setValue, trigger, formState, handleSubmit } = form;
+  const targetRole = useWatch({ control, name: "targetRole" });
+  const experienceLevel = useWatch({ control, name: "experienceLevel" });
+  const weeklyHours = useWatch({ control, name: "weeklyHours" });
+  const cvText = useWatch({ control, name: "cvText" });
+  const jobDescriptionText = useWatch({ control, name: "jobDescriptionText" });
 
   async function goNext() {
     const fieldsByStep: (keyof CreateAnalysisInput)[][] = [
@@ -103,6 +107,23 @@ export default function NewAnalysisPage() {
     setFileName(null);
     setStep(STEPS.length - 1);
     toast.success("Demo profile loaded — review and analyze whenever you're ready.");
+  }
+
+  async function createDemoAnalysis() {
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/demo-analysis", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Couldn't create demo analysis.");
+        setSubmitting(false);
+        return;
+      }
+      router.push(`/dashboard/analysis/${data.id}/results`);
+    } catch {
+      toast.error("Something went wrong creating the demo.");
+      setSubmitting(false);
+    }
   }
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -190,7 +211,7 @@ export default function NewAnalysisPage() {
           type="button"
           variant="outline"
           size="sm"
-          onClick={fillDemoData}
+          onClick={createDemoAnalysis}
           className="gap-1.5 border-ai/30 text-ai hover:bg-ai/10 hover:text-ai"
         >
           <Sparkles className="h-3.5 w-3.5" /> Try Demo: Junior Frontend Developer
@@ -230,7 +251,7 @@ export default function NewAnalysisPage() {
             <div>
               <Label className="mb-3 block text-base">Experience level</Label>
               <RadioGroup
-                value={watch("experienceLevel")}
+                value={experienceLevel}
                 onValueChange={(v) => setValue("experienceLevel", v as CreateAnalysisInput["experienceLevel"], { shouldValidate: true })}
                 className="flex flex-wrap gap-3"
               >
@@ -239,7 +260,7 @@ export default function NewAnalysisPage() {
                     key={opt.value}
                     htmlFor={`exp-${opt.value}`}
                     className={`cursor-pointer rounded-full border px-4 py-2 text-sm transition-colors ${
-                      watch("experienceLevel") === opt.value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40"
+                      experienceLevel === opt.value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40"
                     }`}
                   >
                     <RadioGroupItem value={opt.value} id={`exp-${opt.value}`} className="sr-only" />
@@ -252,7 +273,7 @@ export default function NewAnalysisPage() {
             <div>
               <Label className="mb-3 block text-base">Study time available per week</Label>
               <RadioGroup
-                value={watch("weeklyHours")}
+                value={weeklyHours}
                 onValueChange={(v) => setValue("weeklyHours", v as CreateAnalysisInput["weeklyHours"], { shouldValidate: true })}
                 className="flex flex-wrap gap-3"
               >
@@ -261,7 +282,7 @@ export default function NewAnalysisPage() {
                     key={opt.value}
                     htmlFor={`hrs-${opt.value}`}
                     className={`cursor-pointer rounded-full border px-4 py-2 text-sm transition-colors ${
-                      watch("weeklyHours") === opt.value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40"
+                      weeklyHours === opt.value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40"
                     }`}
                   >
                     <RadioGroupItem value={opt.value} id={`hrs-${opt.value}`} className="sr-only" />
@@ -324,9 +345,14 @@ export default function NewAnalysisPage() {
           <div className="space-y-5">
             <div className="flex items-center justify-between">
               <Label>Job description</Label>
-              <Button type="button" variant="outline" size="sm" onClick={useJobTemplate} className="gap-1.5">
-                <FileText className="h-3.5 w-3.5" /> Use a template
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={fillDemoData} className="gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5" /> Fill demo inputs
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={useJobTemplate} className="gap-1.5">
+                  <FileText className="h-3.5 w-3.5" /> Use a template
+                </Button>
+              </div>
             </div>
             <p className="text-sm text-muted-foreground">
               Pasting a real job post from a company you&apos;re interested in gives more personalized results
@@ -351,22 +377,22 @@ export default function NewAnalysisPage() {
                 <div className="flex justify-between">
                   <dt className="text-muted-foreground">Experience level</dt>
                   <dd className="font-medium">
-                    {EXPERIENCE_OPTIONS.find((o) => o.value === watch("experienceLevel"))?.label}
+                    {EXPERIENCE_OPTIONS.find((o) => o.value === experienceLevel)?.label}
                   </dd>
                 </div>
                 <div className="flex justify-between">
                   <dt className="text-muted-foreground">Study time</dt>
                   <dd className="font-medium">
-                    {HOURS_OPTIONS.find((o) => o.value === watch("weeklyHours"))?.label}
+                    {HOURS_OPTIONS.find((o) => o.value === weeklyHours)?.label}
                   </dd>
                 </div>
                 <div className="flex justify-between">
                   <dt className="text-muted-foreground">CV length</dt>
-                  <dd className="font-medium">{watch("cvText").length.toLocaleString()} characters</dd>
+                  <dd className="font-medium">{cvText.length.toLocaleString()} characters</dd>
                 </div>
                 <div className="flex justify-between">
                   <dt className="text-muted-foreground">Job description length</dt>
-                  <dd className="font-medium">{watch("jobDescriptionText").length.toLocaleString()} characters</dd>
+                  <dd className="font-medium">{jobDescriptionText.length.toLocaleString()} characters</dd>
                 </div>
               </dl>
               <p className="mt-4 border-t border-border pt-3 text-xs text-muted-foreground">

@@ -14,11 +14,11 @@ import {
   AlertTriangle,
   FilePlus2,
   History,
+  ClipboardCheck,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { AnalysisSkeleton } from "@/components/analysis/analysis-skeleton";
 import { EmptyNotice } from "@/components/analysis/empty-notice";
@@ -27,8 +27,10 @@ import { ScoreRing } from "@/components/analysis/score-ring";
 import { AddProofDialog } from "@/components/analysis/add-proof-dialog";
 import { ReassessPanel } from "@/components/analysis/reassess-panel";
 import { EvidenceTimeline } from "@/components/analysis/evidence-timeline";
+import { ProjectBuilder } from "@/components/analysis/project-builder";
+import { SkillsRadar } from "@/components/analysis/skills-radar";
 import { getRoleTemplate } from "@/lib/roles";
-import { AnalysisDTO, EvidenceItemDTO, MatchedRequirementDTO } from "@/lib/types/analysis";
+import { AnalysisDTO, EvidenceItemDTO, MatchedRequirementDTO, ProjectRecommendationDTO } from "@/lib/types/analysis";
 
 export default function ResultsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -72,6 +74,20 @@ export default function ResultsPage({ params }: { params: Promise<{ id: string }
 
   function addEvidenceLocal(evidence: EvidenceItemDTO) {
     setAnalysis((prev) => (prev ? { ...prev, evidenceItems: [evidence, ...prev.evidenceItems] } : prev));
+  }
+
+  function updateProjectLocal(project: ProjectRecommendationDTO) {
+    setAnalysis((prev) =>
+      prev
+        ? {
+            ...prev,
+            projectRecommendations: [
+              project,
+              ...prev.projectRecommendations.filter((item) => item.id !== project.id && item.source !== "AI_GENERATED"),
+            ],
+          }
+        : prev
+    );
   }
 
   async function buildRoadmap() {
@@ -229,30 +245,36 @@ export default function ResultsPage({ params }: { params: Promise<{ id: string }
         </section>
       )}
 
+      <SkillsRadar matched={matched} />
+
+      <section className="rounded-2xl border border-border bg-card p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="flex items-center gap-2 text-lg font-semibold">
+              <ClipboardCheck className="h-4 w-4 text-primary" /> Skill verification quizzes
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              A short quiz can modestly improve confidence signals, but portfolio evidence remains stronger proof.
+            </p>
+          </div>
+          <Button variant="outline" asChild>
+            <Link href={`/dashboard/quizzes?analysisId=${id}`}>Take a quiz</Link>
+          </Button>
+        </div>
+      </section>
+
       {/* Recommended project */}
-      {analysis.projectRecommendations.length > 0 && (
-        <section>
-          <h2 className="mb-3 text-lg font-semibold">Recommended project</h2>
-          {analysis.projectRecommendations.map((p) => (
-            <Card key={p.id} className="border border-border">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-2">
-                  <Code2 className="h-4 w-4 text-muted-foreground" />
-                  <h3 className="font-medium">{p.title}</h3>
-                </div>
-                <p className="mt-2 text-sm text-muted-foreground">{p.description}</p>
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  {p.requiredSkills.map((s) => (
-                    <Badge key={s} variant="secondary" className="font-normal">
-                      {s}
-                    </Badge>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </section>
-      )}
+      <section>
+        <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold">
+          <Code2 className="h-4 w-4 text-ai" /> Build proof, not just knowledge
+        </h2>
+        <ProjectBuilder
+          analysisId={id}
+          project={analysis.projectRecommendations.find((p) => p.source === "AI_GENERATED") ?? analysis.projectRecommendations[0] ?? null}
+          hasRoadmap={Boolean(analysis.roadmap)}
+          onProjectChange={updateProjectLocal}
+        />
+      </section>
 
       {/* Expandable full skills analysis */}
       <section>
@@ -339,7 +361,10 @@ export default function ResultsPage({ params }: { params: Promise<{ id: string }
       </section>
 
       {/* Evidence timeline */}
-      {(analysis.readinessSnapshots.length > 0 || analysis.evidenceItems.length > 0) && (
+      {(analysis.readinessSnapshots.length > 0 ||
+        analysis.evidenceItems.length > 0 ||
+        analysis.weeklyCheckIns.length > 0 ||
+        analysis.quizAttempts.length > 0) && (
         <section>
           <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold">
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -348,7 +373,13 @@ export default function ResultsPage({ params }: { params: Promise<{ id: string }
             Evidence timeline
           </h2>
           <div className="rounded-xl border border-border bg-card p-5">
-            <EvidenceTimeline snapshots={analysis.readinessSnapshots} evidence={analysis.evidenceItems} />
+            <EvidenceTimeline
+              analysisId={id}
+              snapshots={analysis.readinessSnapshots}
+              evidence={analysis.evidenceItems}
+              checkIns={analysis.weeklyCheckIns}
+              quizAttempts={analysis.quizAttempts}
+            />
           </div>
         </section>
       )}
@@ -399,4 +430,3 @@ function BreakdownStat({
     </div>
   );
 }
-

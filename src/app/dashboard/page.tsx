@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { currentUser } from "@clerk/nextjs/server";
-import { ArrowRight, FileSearch, Map, Sparkles, Target, TrendingUp } from "lucide-react";
+import { ArrowRight, BriefcaseBusiness, ClipboardCheck, FileCheck2, FileSearch, Map, Sparkles, Target, TrendingUp } from "lucide-react";
 import { getOrCreateCurrentUser } from "@/lib/db/users";
 import { prisma } from "@/lib/db/prisma";
 import { getRoleTemplate } from "@/lib/roles";
@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import { ScoreRing } from "@/components/analysis/score-ring";
+import { WeeklyCheckInCard } from "@/components/roadmap/weekly-check-in-card";
 
 export default async function DashboardPage() {
   const clerkUser = await currentUser();
@@ -22,7 +23,15 @@ export default async function DashboardPage() {
     include: {
       skillGaps: { orderBy: { priority: "asc" }, take: 3 },
       roadmap: { include: { weeks: { include: { tasks: true } } } },
+      evidenceItems: { orderBy: { createdAt: "desc" }, take: 3, include: { resumeBullets: true } },
+      projectRecommendations: { orderBy: { createdAt: "desc" }, take: 1 },
+      weeklyCheckIns: { orderBy: { createdAt: "desc" }, take: 1 },
     },
+  });
+  const applications = await prisma.jobApplication.findMany({
+    where: { userId: user.id },
+    orderBy: { createdAt: "desc" },
+    take: 3,
   });
 
   const latest = analyses[0];
@@ -52,6 +61,11 @@ export default async function DashboardPage() {
           <FeatureHint icon={TrendingUp} text="Gaps ranked by what actually matters" />
           <FeatureHint icon={Map} text="A 4-week roadmap with proof, not just theory" />
         </div>
+        <div className="mt-6 flex justify-center">
+          <Button variant="outline" asChild>
+            <Link href="/dashboard/quizzes">Explore skill quizzes</Link>
+          </Button>
+        </div>
       </div>
     );
   }
@@ -59,6 +73,31 @@ export default async function DashboardPage() {
   const roadmapTasks = latest.roadmap?.weeks.flatMap((w) => w.tasks) ?? [];
   const completedTasks = roadmapTasks.filter((t) => t.status === "COMPLETE").length;
   const progressPct = roadmapTasks.length ? Math.round((completedTasks / roadmapTasks.length) * 100) : 0;
+  const nextTask = roadmapTasks.find((task) => task.status !== "COMPLETE") ?? null;
+  const nextTaskDto = nextTask
+    ? {
+        id: nextTask.id,
+        title: nextTask.title,
+        description: nextTask.description,
+        status: nextTask.status,
+        completedAt: nextTask.completedAt?.toISOString() ?? null,
+        evidenceUrl: nextTask.evidenceUrl,
+        evidenceType: nextTask.evidenceType,
+        notes: nextTask.notes,
+      }
+    : null;
+  const latestCheckInDto = latest.weeklyCheckIns[0]
+    ? {
+        id: latest.weeklyCheckIns[0].id,
+        roadmapTaskId: latest.weeklyCheckIns[0].roadmapTaskId,
+        response: latest.weeklyCheckIns[0].response,
+        blocker: latest.weeklyCheckIns[0].blocker,
+        availableHours: latest.weeklyCheckIns[0].availableHours,
+        aiSuggestion: latest.weeklyCheckIns[0].aiSuggestion,
+        adjustedTask: latest.weeklyCheckIns[0].adjustedTask,
+        createdAt: latest.weeklyCheckIns[0].createdAt.toISOString(),
+      }
+    : null;
 
   return (
     <div className="space-y-8">
@@ -184,8 +223,103 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <WeeklyCheckInCard
+            analysisId={latest.id}
+            task={nextTaskDto}
+            latestCheckIn={latestCheckInDto}
+          />
+        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Target className="h-4 w-4 text-primary" /> Next smallest action
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {nextTask ? (
+              <>
+                <p className="font-medium">{nextTask.title}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{nextTask.description}</p>
+                <Button className="mt-4" size="sm" asChild>
+                  <Link href={`/dashboard/analysis/${latest.id}/roadmap`}>Open roadmap</Link>
+                </Button>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">Generate or continue a roadmap to see your next action.</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <FileCheck2 className="h-4 w-4 text-matched" /> Recent evidence
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {latest.evidenceItems.length === 0 && (
+              <p className="text-sm text-muted-foreground">Add proof from a roadmap task to build your portfolio trail.</p>
+            )}
+            {latest.evidenceItems.map((evidence) => (
+              <div key={evidence.id} className="rounded-lg border border-border/70 p-3 text-sm">
+                <p className="font-medium">{evidence.type.replaceAll("_", " ")}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {stringArray(evidence.provesSkills).length
+                    ? stringArray(evidence.provesSkills).join(", ")
+                    : "Reflection or link saved"}
+                </p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <ClipboardCheck className="h-4 w-4 text-ai" /> Skill quizzes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Short checks for React, TypeScript, REST APIs, Git, SQL, Python, and data visualization.
+            </p>
+            <Button className="mt-4" variant="outline" size="sm" asChild>
+              <Link href="/dashboard/quizzes">Start a quiz</Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <BriefcaseBusiness className="h-4 w-4 text-primary" /> Application tracker
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {applications.length === 0 && <p className="text-sm text-muted-foreground">Save target roles when you are preparing to apply.</p>}
+            {applications.map((application) => (
+              <div key={application.id} className="rounded-lg border border-border/70 p-3 text-sm">
+                <p className="font-medium">{application.jobTitle}</p>
+                <p className="text-xs text-muted-foreground">{application.company} - {application.status}</p>
+              </div>
+            ))}
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/dashboard/applications">Open tracker</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
+}
+
+function stringArray(value: unknown) {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
 }
 
 function FeatureHint({ icon: Icon, text }: { icon: React.ComponentType<{ className?: string }>; text: string }) {

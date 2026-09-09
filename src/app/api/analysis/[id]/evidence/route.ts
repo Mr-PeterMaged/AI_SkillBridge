@@ -63,6 +63,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       reflectionLearned: parsed.data.reflectionLearned ?? null,
       provesSkills: parsed.data.provesSkills,
     },
+    include: { resumeBullets: true },
   });
 
   return NextResponse.json({ evidence }, { status: 201 });

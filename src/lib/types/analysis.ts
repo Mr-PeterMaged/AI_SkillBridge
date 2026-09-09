@@ -37,6 +37,18 @@ export type ProjectRecommendationDTO = {
   requiredSkills: string[];
   deliverables: string[];
   githubChecklist: string[];
+  source: "STATIC" | "AI_GENERATED";
+  valueProposition: string | null;
+  difficulty: string | null;
+  estimatedHours: number | null;
+  userStories: string[];
+  suggestedStack: string[];
+  featureChecklist: string[];
+  buildPlan: { day: number; focus: string; tasks: string[] }[];
+  readmeTemplate: string | null;
+  deploymentChecklist: string[];
+  skillCoverage: { skill: string; isGapCovered: boolean; howCovered: string }[];
+  addedToRoadmap: boolean;
 };
 
 export type RoadmapTaskDTO = {
@@ -74,8 +86,16 @@ export type EvidenceItemDTO = {
   reflectionBuilt: string | null;
   reflectionLearned: string | null;
   provesSkills: string[];
+  resumeBullets: ResumeBulletDTO[];
   createdAt: string;
   updatedAt: string;
+};
+
+export type ResumeBulletDTO = {
+  id: string;
+  evidenceItemId: string;
+  content: string;
+  createdAt: string;
 };
 
 export type ReadinessSnapshotDTO = {
@@ -94,6 +114,33 @@ export type MatchedRequirementDTO = {
   candidateEvidence: string[];
   requirementEvidence: string[];
   candidateConfidence: number;
+};
+
+export type QuizAttemptDTO = {
+  id: string;
+  skill:
+    | "REACT_FUNDAMENTALS"
+    | "TYPESCRIPT_FUNDAMENTALS"
+    | "REST_API_FUNDAMENTALS"
+    | "GIT_FUNDAMENTALS"
+    | "SQL_FUNDAMENTALS"
+    | "PYTHON_FUNDAMENTALS"
+    | "DATA_VISUALIZATION_FUNDAMENTALS";
+  score: number;
+  total: number;
+  status: "LEARNING" | "QUIZ_COMPLETED" | "STRONG_QUIZ_RESULT";
+  createdAt: string;
+};
+
+export type WeeklyCheckInDTO = {
+  id: string;
+  roadmapTaskId: string | null;
+  response: "COMPLETED" | "MADE_PROGRESS" | "GOT_STUCK" | "DID_NOT_START";
+  blocker: string | null;
+  availableHours: number | null;
+  aiSuggestion: string;
+  adjustedTask: string | null;
+  createdAt: string;
 };
 
 export type AnalysisDTO = {
@@ -121,4 +168,6 @@ export type AnalysisDTO = {
   roadmap: RoadmapDTO | null;
   evidenceItems: EvidenceItemDTO[];
   readinessSnapshots: ReadinessSnapshotDTO[];
+  quizAttempts: QuizAttemptDTO[];
+  weeklyCheckIns: WeeklyCheckInDTO[];
 };

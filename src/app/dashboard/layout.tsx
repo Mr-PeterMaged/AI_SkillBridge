@@ -2,7 +2,7 @@ import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Plus, Settings } from "lucide-react";
+import { BriefcaseBusiness, ClipboardCheck, Plus, Settings } from "lucide-react";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -17,6 +17,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </Link>
 
           <div className="flex items-center gap-3">
+            <Button size="sm" variant="ghost" className="hidden gap-1.5 sm:inline-flex" asChild>
+              <Link href="/dashboard/quizzes">
+                <ClipboardCheck className="h-4 w-4" /> Quizzes
+              </Link>
+            </Button>
+            <Button size="sm" variant="ghost" className="hidden gap-1.5 md:inline-flex" asChild>
+              <Link href="/dashboard/applications">
+                <BriefcaseBusiness className="h-4 w-4" /> Applications
+              </Link>
+            </Button>
             <Button size="sm" className="gap-1.5" asChild>
               <Link href="/dashboard/analysis/new">
                 <Plus className="h-4 w-4" /> New Analysis

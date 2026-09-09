@@ -24,7 +24,10 @@ model User {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  analyses Analysis[]
+  analyses        Analysis[]
+  quizAttempts    QuizAttempt[]
+  weeklyCheckIns  WeeklyCheckIn[]
+  jobApplications JobApplication[]
 
   @@index([clerkUserId])
 }
@@ -69,34 +72,37 @@ enum AnalysisStatus {
 // Raw CV text is intentionally NOT stored once structured skills are
 // extracted and confirmed — see lib/db/retention.ts.
 model Analysis {
-  id              String          @id @default(cuid())
-  userId          String
-  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   targetRole      TargetRole
   experienceLevel ExperienceLevel
   weeklyHours     WeeklyHours
 
   // Parsed input text. Nullable once purged (see privacy/delete flow).
-  cvText              String?
-  jobDescriptionText  String?
+  cvText             String?
+  jobDescriptionText String?
 
-  status          AnalysisStatus  @default(DRAFT)
-  readinessScore  Int?            // 0-100, computed server-side, never by the LLM
-  scoreBreakdown  Json?           // { criticalCoverage, importantCoverage, evidenceCoverage }
+  status           AnalysisStatus @default(DRAFT)
+  readinessScore   Int? // 0-100, computed server-side, never by the LLM
+  scoreBreakdown   Json? // { criticalCoverage, importantCoverage, evidenceCoverage }
   candidateSummary String?
   jobSummary       String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  candidateSkills  CandidateSkill[]
-  jobRequirements  JobRequirement[]
-  skillGaps        SkillGap[]
-  roadmap          Roadmap?
+  candidateSkills        CandidateSkill[]
+  jobRequirements        JobRequirement[]
+  skillGaps              SkillGap[]
+  roadmap                Roadmap?
   projectRecommendations ProjectRecommendation[]
-  evidenceItems      EvidenceItem[]
-  readinessSnapshots ReadinessSnapshot[]
+  evidenceItems          EvidenceItem[]
+  readinessSnapshots     ReadinessSnapshot[]
+  weeklyCheckIns         WeeklyCheckIn[]
+  jobApplications        JobApplication[]
+  quizAttempts           QuizAttempt[]
 
   @@index([userId])
   @@index([userId, createdAt])
@@ -122,9 +128,9 @@ enum SkillMastery {
 }
 
 model CandidateSkill {
-  id            String        @id @default(cuid())
-  analysisId    String
-  analysis      Analysis      @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  analysisId String
+  analysis   Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
 
   name          String
   canonicalName String
@@ -148,15 +154,15 @@ enum RequirementPriority {
 }
 
 model JobRequirement {
-  id            String               @id @default(cuid())
-  analysisId    String
-  analysis      Analysis             @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  analysisId String
+  analysis   Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
 
   name          String
   canonicalName String
   category      SkillCategory
   priority      RequirementPriority
-  evidence      Json                 @default("[]") // string[], quotes from the JD
+  evidence      Json                @default("[]") // string[], quotes from the JD
 
   createdAt DateTime @default(now())
 
@@ -164,16 +170,16 @@ model JobRequirement {
 }
 
 model SkillGap {
-  id             String               @id @default(cuid())
-  analysisId     String
-  analysis       Analysis             @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  analysisId String
+  analysis   Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
 
   skillName      String
   canonicalName  String
   priority       RequirementPriority
-  reason         String               @db.Text
-  suggestedProof String               @db.Text
-  estimatedHours Int                  @default(4)
+  reason         String              @db.Text
+  suggestedProof String              @db.Text
+  estimatedHours Int                 @default(4)
 
   createdAt DateTime @default(now())
 
@@ -181,9 +187,9 @@ model SkillGap {
 }
 
 model Roadmap {
-  id            String   @id @default(cuid())
-  analysisId    String   @unique
-  analysis      Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  analysisId String   @unique
+  analysis   Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
 
   durationWeeks Int      @default(4)
   createdAt     DateTime @default(now())
@@ -192,20 +198,20 @@ model Roadmap {
 }
 
 model RoadmapWeek {
-  id                 String  @id @default(cuid())
-  roadmapId          String
-  roadmap            Roadmap @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  id        String  @id @default(cuid())
+  roadmapId String
+  roadmap   Roadmap @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
 
-  weekNumber         Int
-  focus              String
-  learningObjective  String  @db.Text
-  estimatedHours     Int
-  resources          Json    @default("[]") // { title, url }[]
+  weekNumber        Int
+  focus             String
+  learningObjective String @db.Text
+  estimatedHours    Int
+  resources         Json   @default("[]") // { title, url }[]
 
   tasks RoadmapTask[]
 
-  @@index([roadmapId])
   @@unique([roadmapId, weekNumber])
+  @@index([roadmapId])
 }
 
 enum TaskStatus {
@@ -223,20 +229,21 @@ enum EvidenceType {
 }
 
 model RoadmapTask {
-  id            String        @id @default(cuid())
+  id            String      @id @default(cuid())
   roadmapWeekId String
-  roadmapWeek   RoadmapWeek   @relation(fields: [roadmapWeekId], references: [id], onDelete: Cascade)
+  roadmapWeek   RoadmapWeek @relation(fields: [roadmapWeekId], references: [id], onDelete: Cascade)
 
-  title         String
-  description   String        @db.Text
-  status        TaskStatus    @default(PENDING)
-  completedAt   DateTime?
+  title       String
+  description String     @db.Text
+  status      TaskStatus @default(PENDING)
+  completedAt DateTime?
 
-  evidenceUrl   String?
-  evidenceType  EvidenceType?
-  notes         String?       @db.Text
+  evidenceUrl  String?
+  evidenceType EvidenceType?
+  notes        String?       @db.Text
 
-  evidenceItems EvidenceItem[]
+  evidenceItems  EvidenceItem[]
+  weeklyCheckIns WeeklyCheckIn[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -244,16 +251,36 @@ model RoadmapTask {
   @@index([roadmapWeekId])
 }
 
-model ProjectRecommendation {
-  id               String   @id @default(cuid())
-  analysisId       String
-  analysis         Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+enum ProjectSource {
+  STATIC
+  AI_GENERATED
+}
 
-  title            String
-  description      String   @db.Text
-  requiredSkills   Json     @default("[]") // string[]
-  deliverables     Json     @default("[]") // string[]
-  githubChecklist  Json     @default("[]") // string[]
+model ProjectRecommendation {
+  id         String   @id @default(cuid())
+  analysisId String
+  analysis   Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  title           String
+  description     String @db.Text
+  requiredSkills  Json   @default("[]") // string[]
+  deliverables    Json   @default("[]") // string[]
+  githubChecklist Json   @default("[]") // string[]
+
+  // Phase 3 — Portfolio Project Builder. Null/default on older STATIC rows.
+  source              ProjectSource @default(STATIC)
+  valueProposition    String?       @db.Text
+  difficulty          String?
+  estimatedHours      Int?
+  userStories         Json          @default("[]") // string[]
+  suggestedStack      Json          @default("[]") // string[]
+  featureChecklist    Json          @default("[]") // string[]
+  buildPlan           Json          @default("[]") // { day, focus, tasks: string[] }[]
+  readmeTemplate      String?       @db.Text
+  deploymentChecklist Json          @default("[]") // string[]
+  // Deterministic — computed from the analysis's own skillGaps, never by the AI.
+  skillCoverage       Json          @default("[]") // { skill, isGapCovered, howCovered }[]
+  addedToRoadmap      Boolean       @default(false)
 
   createdAt DateTime @default(now())
 
@@ -269,12 +296,12 @@ model ProjectRecommendation {
 // automatic AI inference — see the reassess route.
 // ---------------------------------------------------------------
 model EvidenceItem {
-  id            String        @id @default(cuid())
-  analysisId    String
-  analysis      Analysis      @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  analysisId String
+  analysis   Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
 
   roadmapTaskId String?
-  roadmapTask   RoadmapTask?  @relation(fields: [roadmapTaskId], references: [id], onDelete: SetNull)
+  roadmapTask   RoadmapTask? @relation(fields: [roadmapTaskId], references: [id], onDelete: SetNull)
 
   type              EvidenceType
   url               String?
@@ -284,6 +311,8 @@ model EvidenceItem {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  resumeBullets ResumeBullet[]
 
   @@index([analysisId])
   @@index([roadmapTaskId])
@@ -298,9 +327,9 @@ enum SnapshotKind {
 // Timeline and "before/after" reassessment UI can render history
 // without recomputing anything retroactively.
 model ReadinessSnapshot {
-  id             String       @id @default(cuid())
-  analysisId     String
-  analysis       Analysis     @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  analysisId String
+  analysis   Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
 
   kind           SnapshotKind
   readinessScore Int
@@ -310,4 +339,114 @@ model ReadinessSnapshot {
 
   @@index([analysisId])
   @@index([analysisId, createdAt])
+}
+
+enum QuizSkill {
+  REACT_FUNDAMENTALS
+  TYPESCRIPT_FUNDAMENTALS
+  REST_API_FUNDAMENTALS
+  GIT_FUNDAMENTALS
+  SQL_FUNDAMENTALS
+  PYTHON_FUNDAMENTALS
+  DATA_VISUALIZATION_FUNDAMENTALS
+}
+
+enum QuizResultStatus {
+  LEARNING
+  QUIZ_COMPLETED
+  STRONG_QUIZ_RESULT
+}
+
+model QuizAttempt {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  analysisId String?
+  analysis   Analysis? @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  skill   QuizSkill
+  score   Int
+  total   Int
+  status  QuizResultStatus
+  answers Json             @default("[]") // { questionId, selectedOptionId, correct }[]
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, skill, createdAt])
+  @@index([analysisId])
+}
+
+enum CheckInResponse {
+  COMPLETED
+  MADE_PROGRESS
+  GOT_STUCK
+  DID_NOT_START
+}
+
+model WeeklyCheckIn {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  analysisId String
+  analysis   Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  roadmapTaskId String?
+  roadmapTask   RoadmapTask? @relation(fields: [roadmapTaskId], references: [id], onDelete: SetNull)
+
+  response       CheckInResponse
+  blocker        String?         @db.Text
+  availableHours Int?
+  aiSuggestion   String          @db.Text
+  adjustedTask   String?         @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([analysisId, createdAt])
+  @@index([roadmapTaskId])
+}
+
+model ResumeBullet {
+  id             String       @id @default(cuid())
+  evidenceItemId String
+  evidenceItem   EvidenceItem @relation(fields: [evidenceItemId], references: [id], onDelete: Cascade)
+
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([evidenceItemId])
+}
+
+enum ApplicationStatus {
+  SAVED
+  PREPARING
+  APPLIED
+  INTERVIEW
+  OFFER
+  REJECTED
+}
+
+model JobApplication {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  analysisId String?
+  analysis   Analysis? @relation(fields: [analysisId], references: [id], onDelete: SetNull)
+
+  jobTitle       String
+  company        String
+  applicationUrl String?
+  status         ApplicationStatus @default(SAVED)
+  deadline       DateTime?
+  notes          String?           @db.Text
+  readinessScore Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([analysisId])
 }
