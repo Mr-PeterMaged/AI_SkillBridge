@@ -89,6 +89,25 @@ export function PromoCodeManager() {
 
   async function createPromo(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    const amount = Number(form.discountAmount);
+    const isPercentage = form.discountType === "PERCENTAGE";
+    let confirmHighDiscount = form.confirmHighDiscount;
+    let confirmFullDiscount = form.confirmFullDiscount;
+
+    if (isPercentage && amount === 100) {
+      if (!window.confirm(`${form.code || "This code"} is a 100% discount — it makes the plan completely free. Continue?`)) return;
+      confirmFullDiscount = true;
+      confirmHighDiscount = true;
+      if (!form.maxRedemptions || Number(form.maxRedemptions) > 30) {
+        toast.error("100% discounts must be limited to 30 uses or fewer. Set \"Max redemptions\" to 30 or less.");
+        return;
+      }
+    } else if (isPercentage && amount >= 70) {
+      if (!window.confirm(`${form.code || "This code"} gives a high discount of ${amount}%. Continue?`)) return;
+      confirmHighDiscount = true;
+    }
+
     setSaving(true);
     try {
       const res = await fetch("/api/admin/promos", {
@@ -96,7 +115,7 @@ export function PromoCodeManager() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
-          discountAmount: Number(form.discountAmount),
+          discountAmount: amount,
           durationMonths: form.durationMonths ? Number(form.durationMonths) : null,
           maxRedemptions: form.maxRedemptions ? Number(form.maxRedemptions) : null,
           perUserRedemptionLimit: Number(form.perUserRedemptionLimit || 1),
@@ -104,6 +123,8 @@ export function PromoCodeManager() {
           expiresAt: form.expiresAt ? new Date(form.expiresAt).toISOString() : null,
           campaignId: form.campaignId === "none" ? null : form.campaignId,
           ambassadorId: form.ambassadorId === "none" ? null : form.ambassadorId,
+          confirmHighDiscount,
+          confirmFullDiscount,
         }),
       });
       const data = await res.json();
@@ -215,9 +236,14 @@ export function PromoCodeManager() {
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           <label className="flex items-center gap-2 text-sm"><Checkbox checked={form.firstTimeCustomersOnly} onCheckedChange={(v) => setForm((p) => ({ ...p, firstTimeCustomersOnly: Boolean(v) }))} /> First-time customers only</label>
           <label className="flex items-center gap-2 text-sm"><Checkbox checked={form.internalOnly} onCheckedChange={(v) => setForm((p) => ({ ...p, internalOnly: Boolean(v) }))} /> Internal-only</label>
-          <label className="flex items-center gap-2 text-sm"><Checkbox checked={form.confirmHighDiscount} onCheckedChange={(v) => setForm((p) => ({ ...p, confirmHighDiscount: Boolean(v) }))} /> Confirm 70%+ discount</label>
-          <label className="flex items-center gap-2 text-sm"><Checkbox checked={form.confirmFullDiscount} onCheckedChange={(v) => setForm((p) => ({ ...p, confirmFullDiscount: Boolean(v) }))} /> Confirm 100% discount</label>
         </div>
+        {form.discountType === "PERCENTAGE" && Number(form.discountAmount) >= 70 && (
+          <p className="mt-2 rounded-lg border border-warning/30 bg-warning/10 p-2 text-xs text-warning-foreground">
+            {Number(form.discountAmount) === 100
+              ? "100% discount — you'll be asked to confirm on submit, and max redemptions must be 30 or fewer."
+              : "High discount (70%+) — you'll be asked to confirm on submit."}
+          </p>
+        )}
 
         <Field label="Internal notes"><Textarea value={form.internalNotes} onChange={(e) => setForm((p) => ({ ...p, internalNotes: e.target.value }))} rows={2} /></Field>
         <div className="mt-4 rounded-xl border border-ai/20 bg-ai/[0.04] p-3 text-sm text-muted-foreground">{preview}</div>
