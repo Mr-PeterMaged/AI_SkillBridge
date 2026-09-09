@@ -17,7 +17,22 @@ export const checkoutQuoteSchema = z.object({
   promoCode: promoCodeSchema.nullish(),
 });
 
-export const createPaymentRequestSchema = checkoutQuoteSchema;
+export const fullNameSchema = z
+  .string()
+  .trim()
+  .regex(/^[A-Za-z]+(?:['-][A-Za-z]+)*(?:\s+[A-Za-z]+(?:['-][A-Za-z]+)*)+$/, "Enter your full name in English (first and last name).")
+  .min(3)
+  .max(80);
+
+export const phoneSchema = z
+  .string()
+  .trim()
+  .regex(/^\+?[0-9\s-]{8,20}$/, "Enter a valid phone number.");
+
+export const createPaymentRequestSchema = checkoutQuoteSchema.extend({
+  fullName: fullNameSchema,
+  phone: phoneSchema,
+});
 
 export const adminPaymentQuerySchema = z.object({
   status: z.string().optional(),

@@ -17,6 +17,8 @@ type PaymentRequest = {
   id: string;
   reference: string;
   userEmailSnapshot: string;
+  fullName: string | null;
+  phone: string | null;
   selectedPlan: string;
   billingInterval: string;
   status: string;
@@ -152,18 +154,22 @@ export function PaymentRequestManager() {
         <table className="w-full min-w-[1180px] text-left text-sm">
           <thead className="text-xs text-muted-foreground">
             <tr className="border-b border-border">
-              {["Reference", "User email", "Plan", "Original", "Discount", "Final", "Promo", "Status", "Created", "Submitted", "Reviewer", "Actions"].map((heading) => (
+              {["Reference", "User email", "Contact", "Plan", "Original", "Discount", "Final", "Promo", "Status", "Created", "Submitted", "Reviewer", "Actions"].map((heading) => (
                 <th key={heading} className="px-3 py-2">{heading}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {loading && <tr><td colSpan={12} className="px-3 py-8 text-muted-foreground">Loading payment requests...</td></tr>}
-            {!loading && items.length === 0 && <tr><td colSpan={12} className="px-3 py-8 text-muted-foreground">No payment requests found.</td></tr>}
+            {loading && <tr><td colSpan={13} className="px-3 py-8 text-muted-foreground">Loading payment requests...</td></tr>}
+            {!loading && items.length === 0 && <tr><td colSpan={13} className="px-3 py-8 text-muted-foreground">No payment requests found.</td></tr>}
             {items.map((item) => (
               <tr key={item.id} className="border-b border-border/60">
                 <td className="px-3 py-2 font-mono text-xs">{item.reference}</td>
                 <td className="px-3 py-2">{item.userEmailSnapshot}</td>
+                <td className="px-3 py-2">
+                  <div>{item.fullName ?? "-"}</div>
+                  <div className="text-xs text-muted-foreground">{item.phone ?? "-"}</div>
+                </td>
                 <td className="px-3 py-2">{getPlan(toPlanCode(item.selectedPlan as Plan)).name}</td>
                 <td className="px-3 py-2">{formatEgp(item.originalAmount)}</td>
                 <td className="px-3 py-2">-{formatEgp(item.discountAmount)}</td>
@@ -261,6 +267,8 @@ function DetailRows({ request }: { request: PaymentRequest }) {
   return (
     <dl className="space-y-2 rounded-lg border border-border p-3 text-sm">
       <Row label="User email" value={request.userEmailSnapshot} />
+      <Row label="Full name" value={request.fullName ?? "Not provided"} />
+      <Row label="Phone" value={request.phone ?? "Not provided"} />
       <Row label="Plan" value={plan.name} />
       <Row label="Final amount expected" value={formatEgp(request.finalAmount)} />
       <Row label="Promo code and discount" value={`${promoFromSnapshot(request.promoCodeSnapshot) ?? "None"} / -${formatEgp(request.discountAmount)}`} />

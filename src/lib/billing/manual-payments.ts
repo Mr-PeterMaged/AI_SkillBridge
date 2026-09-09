@@ -26,6 +26,8 @@ export async function createManualPaymentRequest(params: {
   user: { id: string; email: string };
   plan: PlanCode;
   promoCode?: string | null;
+  fullName: string;
+  phone: string;
 }) {
   const paymentNumber = getConfiguredInstaPayNumber();
   if (!paymentNumber) {
@@ -46,7 +48,11 @@ export async function createManualPaymentRequest(params: {
     orderBy: { createdAt: "desc" },
   });
   if (duplicate) {
-    return { request: duplicate, reused: true, paymentNumber };
+    const refreshed = await prisma.manualPaymentRequest.update({
+      where: { id: duplicate.id },
+      data: { fullName: params.fullName, phone: params.phone },
+    });
+    return { request: refreshed, reused: true, paymentNumber };
   }
 
   const quote = await buildCheckoutQuote({
@@ -71,6 +77,8 @@ export async function createManualPaymentRequest(params: {
           promoCodeId: quote.promoCodeId,
           promoCodeSnapshot: quote.promoCodeSnapshot ?? Prisma.JsonNull,
           userEmailSnapshot: params.user.email,
+          fullName: params.fullName,
+          phone: params.phone,
           expiresAt,
         },
       });
@@ -244,18 +252,22 @@ export function subscriptionEndFor(plan: Plan, activationDate: Date) {
 export function paymentMessage(params: {
   request: Pick<
     ManualPaymentRequest,
-    "reference" | "userEmailSnapshot" | "selectedPlan" | "finalAmount" | "promoCodeSnapshot"
+    "reference" | "userEmailSnapshot" | "selectedPlan" | "finalAmount" | "promoCodeSnapshot" | "fullName" | "phone"
   >;
 }) {
   const plan = getPlan(params.request.selectedPlan as PlanCode);
   const promoCode = promoCodeFromSnapshot(params.request.promoCodeSnapshot);
   const finalAmount = formatEgp(params.request.finalAmount);
+  const fullName = params.request.fullName ?? "Not provided";
+  const phone = params.request.phone ?? "Not provided";
 
   return {
     en: `Hello SkillBridge AI,
 I completed an InstaPay transfer for my subscription.
 
 Payment Request ID: ${params.request.reference}
+Full name: ${fullName}
+Phone: ${phone}
 SkillBridge account email: ${params.request.userEmailSnapshot}
 Selected plan: ${plan.name}
 Final amount transferred: ${finalAmount}
@@ -266,6 +278,8 @@ I will send the transfer screenshot below.`,
 تم تحويل قيمة الاشتراك عبر InstaPay.
 
 رقم طلب الدفع: ${params.request.reference}
+الاسم بالكامل: ${fullName}
+رقم الهاتف: ${phone}
 البريد الإلكتروني المسجل في SkillBridge: ${params.request.userEmailSnapshot}
 الباقة المختارة: ${plan.name}
 المبلغ المحول: ${finalAmount.replace(" EGP", " جنيه")}
@@ -280,7 +294,7 @@ export function whatsappUrl(paymentNumber: string, message: string) {
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
 
-function promoCodeFromSnapshot(snapshot: unknown) {
+export function promoCodeFromSnapshot(snapshot: unknown) {
   if (snapshot && typeof snapshot === "object" && "code" in snapshot && typeof snapshot.code === "string") {
     return snapshot.code;
   }

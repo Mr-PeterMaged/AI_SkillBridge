@@ -49,6 +49,8 @@ export function PricingCheckout({ plans }: { plans: PlanConfig[] }) {
       ? (initialCheckout as PlanCode)
       : null
   );
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
   const [promoCode, setPromoCode] = useState("");
   const [quote, setQuote] = useState<Quote | null>(null);
   const [created, setCreated] = useState<CreatedRequest | null>(null);
@@ -73,7 +75,13 @@ export function PricingCheckout({ plans }: { plans: PlanConfig[] }) {
     setCreated(null);
     setError(null);
     setPromoCode("");
+    setFullName("");
+    setPhone("");
   }
+
+  const fullNameValid = /^[A-Za-z]+(?:['-][A-Za-z]+)*(?:\s+[A-Za-z]+(?:['-][A-Za-z]+)*)+$/.test(fullName.trim());
+  const phoneValid = /^\+?[0-9\s-]{8,20}$/.test(phone.trim());
+  const canSubmit = fullNameValid && phoneValid;
 
   function normalizePromo(value: string) {
     setPromoCode(value.toUpperCase().replace(/[^A-Z0-9_-]/g, ""));
@@ -103,14 +111,14 @@ export function PricingCheckout({ plans }: { plans: PlanConfig[] }) {
   }
 
   async function createRequest() {
-    if (!plan) return;
+    if (!plan || !canSubmit) return;
     setCreating(true);
     setError(null);
     try {
       const res = await fetch("/api/billing/payment-requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: plan.code, promoCode }),
+        body: JSON.stringify({ plan: plan.code, promoCode, fullName: fullName.trim(), phone: phone.trim() }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -194,6 +202,37 @@ export function PricingCheckout({ plans }: { plans: PlanConfig[] }) {
 
               {!created && (
                 <>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <Label htmlFor="full-name">Full name (English)</Label>
+                      <Input
+                        id="full-name"
+                        value={fullName}
+                        onChange={(event) => setFullName(event.target.value)}
+                        placeholder="e.g. Peter Maged"
+                        maxLength={80}
+                        className="mt-2"
+                      />
+                      {fullName.trim().length > 0 && !fullNameValid && (
+                        <p className="mt-1 text-xs text-destructive">First and last name, English letters only.</p>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="phone">Phone number</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        value={phone}
+                        onChange={(event) => setPhone(event.target.value)}
+                        placeholder="e.g. 01012345678"
+                        maxLength={20}
+                        className="mt-2"
+                      />
+                      {phone.trim().length > 0 && !phoneValid && (
+                        <p className="mt-1 text-xs text-destructive">Enter a valid phone number.</p>
+                      )}
+                    </div>
+                  </div>
                   <div>
                     <Label htmlFor="promo-code">Promo code (optional)</Label>
                     <div className="mt-2 flex gap-2">
@@ -222,7 +261,7 @@ export function PricingCheckout({ plans }: { plans: PlanConfig[] }) {
                     </AnimatePresence>
                     {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
                   </div>
-                  <Button onClick={createRequest} disabled={creating} className="w-full gap-2">
+                  <Button onClick={createRequest} disabled={creating || !canSubmit} className="w-full gap-2">
                     {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                     Create payment request
                   </Button>

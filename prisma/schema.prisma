@@ -787,6 +787,8 @@ model ManualPaymentRequest {
   promoCodeId        String?
   promoCodeSnapshot  Json?
   userEmailSnapshot  String
+  fullName           String?
+  phone              String?
   paymentMethod      String              @default("INSTAPAY")
   createdAt          DateTime            @default(now())
   submittedAt        DateTime?

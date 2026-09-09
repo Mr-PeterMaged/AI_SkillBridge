@@ -4,7 +4,14 @@ import { prisma } from "@/lib/db/prisma";
 import { getOrCreateCurrentUser } from "@/lib/db/users";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createPaymentRequestSchema } from "@/lib/validation/billing";
-import { createManualPaymentRequest, paymentMessage, whatsappUrl } from "@/lib/billing/manual-payments";
+import {
+  createManualPaymentRequest,
+  paymentMessage,
+  promoCodeFromSnapshot,
+  whatsappUrl,
+} from "@/lib/billing/manual-payments";
+import { sendPaymentRequestNotification } from "@/lib/notifications/emailjs";
+import { getPlan, formatEgp, toPlanCode } from "@/lib/config/pricing";
 
 export async function GET() {
   const { userId } = await auth();
@@ -26,6 +33,8 @@ export async function GET() {
       finalAmount: true,
       currency: true,
       promoCodeSnapshot: true,
+      fullName: true,
+      phone: true,
       createdAt: true,
       submittedAt: true,
       reviewedAt: true,
@@ -56,8 +65,22 @@ export async function POST(req: NextRequest) {
       user: { id: user.id, email: user.email },
       plan: parsed.data.plan,
       promoCode: parsed.data.promoCode,
+      fullName: parsed.data.fullName,
+      phone: parsed.data.phone,
     });
     const message = paymentMessage({ request: result.request });
+    const requestWhatsappUrl = whatsappUrl(result.paymentNumber, message.en);
+
+    void sendPaymentRequestNotification({
+      reference: result.request.reference,
+      fullName: result.request.fullName ?? parsed.data.fullName,
+      phone: result.request.phone ?? parsed.data.phone,
+      userEmail: result.request.userEmailSnapshot,
+      planName: getPlan(toPlanCode(result.request.selectedPlan)).name,
+      finalAmountLabel: formatEgp(result.request.finalAmount),
+      promoCode: promoCodeFromSnapshot(result.request.promoCodeSnapshot),
+      whatsappUrl: requestWhatsappUrl,
+    });
 
     return NextResponse.json(
       {
@@ -65,7 +88,7 @@ export async function POST(req: NextRequest) {
         reused: result.reused,
         paymentNumber: result.paymentNumber,
         message,
-        whatsappUrl: whatsappUrl(result.paymentNumber, message.en),
+        whatsappUrl: requestWhatsappUrl,
       },
       { status: result.reused ? 200 : 201 }
     );
