@@ -17,8 +17,10 @@ function getEmailJsConfig() {
  * config or a delivery failure must not block payment-request creation.
  *
  * Recipient ("To Email") is fixed in the EmailJS template settings, not
- * passed from here — template_params only fill in {{name}}, {{email}},
- * {{title}}, {{time}}, {{message}} used by that template's content/subject.
+ * passed from here. template_params fill in {{name}}, {{email}}, {{title}},
+ * {{time}} used by the template header/subject, plus the per-field merge
+ * tags ({{full_name}}, {{phone}}, {{plan_name}}, {{promo_code}}, ...) used
+ * by the custom fields table in the template body.
  */
 export async function sendPaymentRequestNotification(params: {
   reference: string;
@@ -36,18 +38,6 @@ export async function sendPaymentRequestNotification(params: {
     return;
   }
 
-  const message = `New SkillBridge payment request
-
-Reference: ${params.reference}
-Full name: ${params.fullName}
-Phone: ${params.phone}
-Account email: ${params.userEmail}
-Plan: ${params.planName}
-Amount due: ${params.finalAmountLabel}
-Promo code: ${params.promoCode}
-
-WhatsApp thread: ${params.whatsappUrl}`;
-
   try {
     const res = await fetch(EMAILJS_SEND_URL, {
       method: "POST",
@@ -62,7 +52,14 @@ WhatsApp thread: ${params.whatsappUrl}`;
           email: params.userEmail,
           title: `${params.planName} — ${params.reference}`,
           time: new Date().toLocaleString("en-GB", { timeZone: "Africa/Cairo" }),
-          message,
+          full_name: params.fullName,
+          phone: params.phone,
+          user_email: params.userEmail,
+          plan_name: params.planName,
+          final_amount: params.finalAmountLabel,
+          promo_code: params.promoCode,
+          reference: params.reference,
+          whatsapp_url: params.whatsappUrl,
         },
       }),
     });
