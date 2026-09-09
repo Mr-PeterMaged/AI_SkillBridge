@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
     const message = paymentMessage({ request: result.request });
     const requestWhatsappUrl = whatsappUrl(result.paymentNumber, message.en);
 
-    void sendPaymentRequestNotification({
+    await sendPaymentRequestNotification({
       reference: result.request.reference,
       fullName: result.request.fullName ?? parsed.data.fullName,
       phone: result.request.phone ?? parsed.data.phone,
