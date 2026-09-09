@@ -2,7 +2,7 @@ import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { BriefcaseBusiness, ClipboardCheck, Plus, Settings } from "lucide-react";
+import { BriefcaseBusiness, ClipboardCheck, Plus, Settings, WalletCards } from "lucide-react";
 import { getCurrentPlatformMember } from "@/lib/auth/admin";
 import { hasPermission, roleLabel } from "@/lib/auth/permissions";
 
@@ -40,6 +40,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
             <Button size="sm" variant="ghost" className="hidden gap-1.5 md:inline-flex" asChild>
               <Link href="/dashboard/applications">
                 <BriefcaseBusiness className="h-4 w-4" /> Applications
+              </Link>
+            </Button>
+            <Button size="sm" variant="ghost" className="hidden gap-1.5 md:inline-flex" asChild>
+              <Link href="/dashboard/billing">
+                <WalletCards className="h-4 w-4" /> Billing
               </Link>
             </Button>
             <Button size="sm" className="gap-1.5" asChild>

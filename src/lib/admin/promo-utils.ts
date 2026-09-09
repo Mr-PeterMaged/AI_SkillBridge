@@ -11,7 +11,7 @@ export function discountDescription(input: {
   const amount =
     input.discountType === "PERCENTAGE"
       ? `${input.discountAmount}% off`
-      : `${input.discountAmount / 100} ${input.currency ?? "USD"} off`;
+      : `${input.discountAmount / 100} ${input.currency ?? "EGP"} off`;
   if (input.duration === "ONCE") return `${amount} once`;
   if (input.duration === "REPEATING") return `${amount} for the first ${input.durationMonths ?? 1} months`;
   return `${amount} forever`;
@@ -58,6 +58,6 @@ function escapeCsv(value: unknown) {
   return /[",\n]/.test(stringValue) ? `"${stringValue.replaceAll('"', '""')}"` : stringValue;
 }
 
-export function money(cents: number, currency = "USD") {
+export function money(cents: number, currency = "EGP") {
   return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(cents / 100);
 }

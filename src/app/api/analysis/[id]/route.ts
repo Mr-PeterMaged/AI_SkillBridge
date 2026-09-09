@@ -4,14 +4,18 @@ import { prisma } from "@/lib/db/prisma";
 import { getOwnedAnalysis } from "@/lib/db/analysis";
 import { getRoleTemplate } from "@/lib/roles";
 import { matchSkills } from "@/lib/scoring/matching";
+import { getActiveEntitlement } from "@/lib/billing/entitlements";
+import { getPlan } from "@/lib/config/pricing";
 
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await ctx.params;
-  const { analysis } = await getOwnedAnalysis(id);
+  const { user, analysis } = await getOwnedAnalysis(id);
   if (!analysis) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const entitlement = await getActiveEntitlement(user);
+  const plan = getPlan(entitlement.plan);
 
   const full = await prisma.analysis.findUnique({
     where: { id },
@@ -54,7 +58,28 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     });
   }
 
-  return NextResponse.json({ analysis: full, matchedRequirements });
+  const visibleAnalysis = plan.entitlements.fullAnalysisHistory
+    ? full
+    : {
+        ...full,
+        skillGaps: full.skillGaps.slice(0, plan.entitlements.topPriorityGaps ?? 3),
+        roadmap: null,
+        projectRecommendations: [],
+        evidenceItems: [],
+        readinessSnapshots: full.readinessSnapshots.slice(0, 1),
+        weeklyCheckIns: [],
+        quizAttempts: [],
+      };
+
+  return NextResponse.json({
+    analysis: visibleAnalysis,
+    matchedRequirements: plan.entitlements.fullAnalysisHistory ? matchedRequirements : matchedRequirements.slice(0, 3),
+    entitlement: {
+      plan: entitlement.plan,
+      entitlements: plan.entitlements,
+      currentPeriodEnd: entitlement.subscription?.currentPeriodEnd?.toISOString() ?? null,
+    },
+  });
 }
 
 export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {

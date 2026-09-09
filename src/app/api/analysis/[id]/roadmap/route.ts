@@ -8,6 +8,7 @@ import { buildRoadmapPrompt, ROADMAP_RESPONSE_SCHEMA } from "@/lib/ai/prompts";
 import { roadmapGenerationResultSchema } from "@/lib/ai/schemas";
 import { ROADMAP_DURATION_BY_WEEKLY_HOURS, WEEKLY_HOURS_NUMBER } from "@/lib/validation/analysis";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { EntitlementError, assertFeature } from "@/lib/billing/entitlements";
 
 export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { userId } = await auth();
@@ -19,8 +20,16 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
   }
 
   const { id } = await ctx.params;
-  const { analysis } = await getOwnedAnalysis(id);
+  const { user, analysis } = await getOwnedAnalysis(id);
   if (!analysis) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  try {
+    await assertFeature(user, "fullRoadmap");
+  } catch (error) {
+    if (error instanceof EntitlementError) {
+      return NextResponse.json({ error: error.message, code: error.code }, { status: error.status });
+    }
+    throw error;
+  }
   if (analysis.status !== "SCORED" && analysis.status !== "ROADMAP_READY") {
     return NextResponse.json({ error: "Confirm your skills before generating a roadmap." }, { status: 400 });
   }

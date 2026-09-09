@@ -37,7 +37,7 @@ type Promo = {
 
 type Option = { id: string; name: string; publicHandle?: string; status: string };
 
-const plans = ["FREE", "STARTER", "PRO", "JOB_SPRINT", "ANNUAL_STUDENT"];
+const plans = ["FREE", "STARTER", "PRO", "JOB_SPRINT"];
 
 export function PromoCodeManager() {
   const [promos, setPromos] = useState<Promo[]>([]);
@@ -320,7 +320,7 @@ function defaultForm() {
     code: "",
     discountType: "PERCENTAGE" as "PERCENTAGE" | "FIXED_AMOUNT",
     discountAmount: "50",
-    currency: "USD",
+    currency: "EGP",
     duration: "REPEATING" as "ONCE" | "REPEATING" | "FOREVER",
     durationMonths: "3",
     eligiblePlans: ["STARTER", "PRO"],

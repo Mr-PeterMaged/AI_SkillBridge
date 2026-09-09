@@ -10,6 +10,7 @@ import { computeSkillCoverage } from "@/lib/scoring/project-coverage";
 import { generateProjectSchema } from "@/lib/validation/project";
 import { WEEKLY_HOURS_NUMBER } from "@/lib/validation/analysis";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { EntitlementError, assertFeature } from "@/lib/billing/entitlements";
 
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { userId } = await auth();
@@ -21,8 +22,16 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   }
 
   const { id } = await ctx.params;
-  const { analysis } = await getOwnedAnalysis(id);
+  const { user, analysis } = await getOwnedAnalysis(id);
   if (!analysis) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  try {
+    await assertFeature(user, "projectBuilder");
+  } catch (error) {
+    if (error instanceof EntitlementError) {
+      return NextResponse.json({ error: error.message, code: error.code }, { status: error.status });
+    }
+    throw error;
+  }
   if (analysis.status !== "SCORED" && analysis.status !== "ROADMAP_READY") {
     return NextResponse.json({ error: "Confirm your skills before building a project." }, { status: 400 });
   }

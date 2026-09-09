@@ -24,12 +24,15 @@ model User {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  analyses             Analysis[]
-  quizAttempts         QuizAttempt[]
-  weeklyCheckIns       WeeklyCheckIn[]
-  jobApplications      JobApplication[]
-  promoRedemptions     PromoRedemption[]
-  referralAttributions ReferralAttribution[]
+  analyses              Analysis[]
+  quizAttempts          QuizAttempt[]
+  weeklyCheckIns        WeeklyCheckIn[]
+  jobApplications       JobApplication[]
+  promoRedemptions      PromoRedemption[]
+  referralAttributions  ReferralAttribution[]
+  subscriptions         Subscription[]
+  manualPaymentRequests ManualPaymentRequest[]
+  planUsageCycles       PlanUsageCycle[]
 
   @@index([clerkUserId])
 }
@@ -40,6 +43,27 @@ enum Plan {
   PRO
   JOB_SPRINT
   ANNUAL_STUDENT
+}
+
+enum BillingInterval {
+  MONTHLY
+  ONE_TIME
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  SUSPENDED
+}
+
+enum ManualPaymentStatus {
+  PENDING_PAYMENT
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  CANCELLED
+  EXPIRED
 }
 
 enum TargetRole {
@@ -493,11 +517,12 @@ model PlatformMember {
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
 
-  invitedBy       PlatformMember?  @relation("MemberInviter", fields: [invitedByMemberId], references: [id], onDelete: SetNull)
-  invitedMembers  PlatformMember[] @relation("MemberInviter")
-  invites         TeamInvite[]
-  auditLogs       AdminAuditLog[]  @relation("AuditActor")
-  targetAuditLogs AdminAuditLog[]  @relation("AuditTargetMember")
+  invitedBy               PlatformMember?        @relation("MemberInviter", fields: [invitedByMemberId], references: [id], onDelete: SetNull)
+  invitedMembers          PlatformMember[]       @relation("MemberInviter")
+  invites                 TeamInvite[]
+  auditLogs               AdminAuditLog[]        @relation("AuditActor")
+  targetAuditLogs         AdminAuditLog[]        @relation("AuditTargetMember")
+  reviewedPaymentRequests ManualPaymentRequest[] @relation("PaymentReviewer")
 
   @@index([role, status])
   @@index([email])
@@ -649,8 +674,9 @@ model PromoCode {
   createdAt              DateTime       @default(now())
   updatedAt              DateTime       @updatedAt
 
-  redemptions  PromoRedemption[]
-  attributions ReferralAttribution[]
+  redemptions           PromoRedemption[]
+  attributions          ReferralAttribution[]
+  manualPaymentRequests ManualPaymentRequest[]
 
   @@index([status])
   @@index([campaignId])
@@ -723,4 +749,77 @@ model PromoAuditLog {
 
   @@index([adminUserId, createdAt])
   @@index([entityType, entityId])
+}
+
+model Subscription {
+  id               String             @id @default(cuid())
+  userId           String
+  plan             Plan
+  status           SubscriptionStatus @default(ACTIVE)
+  billingInterval  BillingInterval
+  startedAt        DateTime
+  currentPeriodEnd DateTime?
+  activatedAt      DateTime?
+  activatedById    String?
+  manualPaymentId  String?            @unique
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  manualPayment ManualPaymentRequest? @relation(fields: [manualPaymentId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@index([plan, status])
+  @@index([currentPeriodEnd])
+}
+
+model ManualPaymentRequest {
+  id                 String              @id @default(cuid())
+  reference          String              @unique
+  userId             String
+  selectedPlan       Plan
+  billingInterval    BillingInterval
+  status             ManualPaymentStatus @default(PENDING_PAYMENT)
+  originalAmount     Int
+  discountAmount     Int                 @default(0)
+  finalAmount        Int
+  currency           String              @default("EGP")
+  promoCodeId        String?
+  promoCodeSnapshot  Json?
+  userEmailSnapshot  String
+  paymentMethod      String              @default("INSTAPAY")
+  createdAt          DateTime            @default(now())
+  submittedAt        DateTime?
+  reviewedAt         DateTime?
+  reviewedByMemberId String?
+  rejectionReason    String?
+  adminNotes         String?             @db.Text
+  expiresAt          DateTime?
+
+  promoCode    PromoCode?      @relation(fields: [promoCodeId], references: [id], onDelete: SetNull)
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy   PlatformMember? @relation("PaymentReviewer", fields: [reviewedByMemberId], references: [id], onDelete: SetNull)
+  subscription Subscription?
+
+  @@index([userId, status])
+  @@index([status, createdAt])
+  @@index([selectedPlan, status])
+  @@index([promoCodeId])
+  @@index([expiresAt])
+}
+
+model PlanUsageCycle {
+  id                 String   @id @default(cuid())
+  userId             String
+  plan               Plan
+  periodStart        DateTime
+  periodEnd          DateTime
+  successfulAnalyses Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, plan, periodStart])
+  @@index([userId, periodEnd])
 }

@@ -7,6 +7,7 @@ import { normalizeSkillName } from "@/lib/scoring/matching";
 import { persistScoreResults } from "@/lib/scoring/persist";
 import { checkRateLimit } from "@/lib/rate-limit";
 import type { ExtractedSkill } from "@/lib/ai/schemas";
+import { EntitlementError, assertFeature } from "@/lib/billing/entitlements";
 
 /**
  * Deterministic reassessment. This route never calls the LLM and never
@@ -25,8 +26,16 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
   }
 
   const { id } = await ctx.params;
-  const { analysis } = await getOwnedAnalysis(id);
+  const { user, analysis } = await getOwnedAnalysis(id);
   if (!analysis) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  try {
+    await assertFeature(user, "reassessment");
+  } catch (error) {
+    if (error instanceof EntitlementError) {
+      return NextResponse.json({ error: error.message, code: error.code }, { status: error.status });
+    }
+    throw error;
+  }
   if (analysis.status !== "SCORED" && analysis.status !== "ROADMAP_READY") {
     return NextResponse.json({ error: "Confirm your skills before requesting a reassessment." }, { status: 400 });
   }

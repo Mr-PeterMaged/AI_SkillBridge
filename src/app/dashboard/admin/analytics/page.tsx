@@ -23,9 +23,9 @@ export default async function AdminAnalyticsPage() {
         <AdminMetricCard label="Checkout attempts" value={metrics.summary.checkoutAttempts} />
         <AdminMetricCard label="Paid conversions" value={metrics.summary.successfulPaidConversions} />
         <AdminMetricCard label="Promo redemptions" value={metrics.summary.totalRedemptions} />
-        <AdminMetricCard label="Gross revenue" value={metrics.summary.grossRevenue / 100} prefix="$" />
-        <AdminMetricCard label="Discounts granted" value={metrics.summary.totalDiscountAmount / 100} prefix="$" />
-        <AdminMetricCard label="Net revenue" value={metrics.summary.netRevenue / 100} prefix="$" />
+        <AdminMetricCard label="Gross revenue" value={metrics.summary.grossRevenue / 100} suffix=" EGP" />
+        <AdminMetricCard label="Discounts granted" value={metrics.summary.totalDiscountAmount / 100} suffix=" EGP" />
+        <AdminMetricCard label="Net revenue" value={metrics.summary.netRevenue / 100} suffix=" EGP" />
         <AdminMetricCard label="Conversion rate" value={Math.round(metrics.summary.overallPromoConversionRate * 100)} suffix="%" />
         <AdminMetricCard label="Average discount" value={Math.round(metrics.summary.averageDiscountPercentage)} suffix="%" />
         <AdminMetricCard label="Expired/exhausted codes" value={metrics.summary.exhaustedPromoCodes} />

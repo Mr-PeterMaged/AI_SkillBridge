@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BarChart3, Megaphone, Tags, UsersRound, ReceiptText, ShieldCheck, ClipboardList } from "lucide-react";
+import { BarChart3, Megaphone, Tags, UsersRound, ReceiptText, ShieldCheck, ClipboardList, WalletCards } from "lucide-react";
 import { requireAdminPage } from "@/lib/auth/admin";
 import { hasPermission, roleLabel } from "@/lib/auth/permissions";
 
@@ -9,6 +9,7 @@ const links = [
   { href: "/dashboard/admin/campaigns", label: "Campaigns", permission: "campaign.read", icon: BarChart3 },
   { href: "/dashboard/admin/ambassadors", label: "Ambassadors", permission: "ambassador.read", icon: UsersRound },
   { href: "/dashboard/admin/redemptions", label: "Redemptions", permission: "redemption.read_limited", icon: ReceiptText },
+  { href: "/dashboard/admin/payments", label: "Payment Requests", permission: "payment_request.read", icon: WalletCards },
   { href: "/dashboard/admin/analytics", label: "Analytics", permission: "analytics.read", icon: BarChart3 },
   { href: "/dashboard/admin/team", label: "Team & Access", permission: "team.read", icon: ShieldCheck },
   { href: "/dashboard/admin/audit-log", label: "Audit Log", permission: "audit.read", icon: ClipboardList },

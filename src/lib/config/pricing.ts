@@ -1,99 +1,229 @@
-// ---------------------------------------------------------------
-// Central pricing configuration — student-friendly EGP pricing.
-// These are launch hypotheses to A/B test with real users, not
-// final prices. Keep every price in this one file so the pricing
-// page and plan-gating logic never drift apart.
-// ---------------------------------------------------------------
+import type { BillingInterval, Plan } from "@prisma/client";
 
-export type PlanId = "FREE" | "STARTER" | "PRO" | "JOB_SPRINT" | "ANNUAL_STUDENT";
+export const PLAN_CODES = ["FREE", "STARTER", "PRO", "JOB_SPRINT"] as const;
+export type PlanCode = (typeof PLAN_CODES)[number];
 
-export type PlanConfig = {
-  id: PlanId;
-  name: string;
-  tagline: string;
-  price: { amount: number; currency: "EGP"; period: "month" | "year" | "one_time" };
-  analysesPerMonth: number | "unlimited_fair_use";
-  features: string[];
-  highlighted?: boolean;
-  cta: string;
+export type BillingType = "FREE" | "RECURRING" | "ONE_TIME";
+
+export type PlanEntitlements = {
+  analysesPerCycle: number | null;
+  analysisLimitLabel: string;
+  fullRoadmap: boolean;
+  roadmapPreview: boolean;
+  curatedResources: boolean;
+  progressTracking: boolean;
+  projectBuilder: boolean;
+  evidenceBuilder: boolean;
+  reassessment: boolean;
+  fullAnalysisHistory: boolean;
+  jobSpecificRoadmaps: boolean;
+  limitedJobDescriptionTemplates: boolean;
+  topPriorityGaps: number | null;
 };
 
-export const PRICING_PLANS: PlanConfig[] = [
-  {
+export type PlanConfig = {
+  code: PlanCode;
+  id: PlanCode;
+  name: string;
+  tagline: string;
+  billingType: BillingType;
+  billingInterval: BillingInterval;
+  pricePiastres: number;
+  currency: "EGP";
+  priceLabel: string;
+  cta: string;
+  highlighted?: boolean;
+  paid: boolean;
+  accessDays?: number;
+  fairUse?: {
+    successfulAnalysesPerCycle: number;
+    analysisStartsPerHour: number;
+    label: string;
+  };
+  entitlements: PlanEntitlements;
+  features: string[];
+};
+
+const FREE_ENTITLEMENTS: PlanEntitlements = {
+  analysesPerCycle: 1,
+  analysisLimitLabel: "1 skill-gap analysis per month",
+  fullRoadmap: false,
+  roadmapPreview: true,
+  curatedResources: false,
+  progressTracking: false,
+  projectBuilder: false,
+  evidenceBuilder: false,
+  reassessment: false,
+  fullAnalysisHistory: false,
+  jobSpecificRoadmaps: false,
+  limitedJobDescriptionTemplates: true,
+  topPriorityGaps: 3,
+};
+
+export const PLAN_CONFIG = {
+  FREE: {
+    code: "FREE",
     id: "FREE",
     name: "Free",
-    tagline: "See your first skill gap snapshot",
-    price: { amount: 0, currency: "EGP", period: "month" },
-    analysesPerMonth: 1,
+    tagline: "A useful first skill-gap snapshot",
+    billingType: "FREE",
+    billingInterval: "MONTHLY",
+    pricePiastres: 0,
+    currency: "EGP",
+    priceLabel: "0 EGP",
+    cta: "Start Free",
+    paid: false,
+    entitlements: FREE_ENTITLEMENTS,
     features: [
       "1 skill-gap analysis per month",
       "Basic readiness score",
       "Top 3 priority gaps",
-      "Roadmap preview (locked full detail)",
-      "Limited job description templates",
+      "Locked roadmap preview",
+      "Limited job-description templates",
     ],
-    cta: "Start Free",
   },
-  {
+  STARTER: {
+    code: "STARTER",
     id: "STARTER",
     name: "Starter",
     tagline: "For students actively closing gaps",
-    price: { amount: 89, currency: "EGP", period: "month" },
-    analysesPerMonth: 3,
+    billingType: "RECURRING",
+    billingInterval: "MONTHLY",
+    pricePiastres: 8900,
+    currency: "EGP",
+    priceLabel: "89 EGP/month",
+    cta: "Choose Starter",
+    paid: true,
+    entitlements: {
+      ...FREE_ENTITLEMENTS,
+      analysesPerCycle: 10,
+      analysisLimitLabel: "10 analyses per month",
+      fullRoadmap: true,
+      roadmapPreview: false,
+      curatedResources: true,
+      progressTracking: true,
+      projectBuilder: false,
+      fullAnalysisHistory: true,
+      topPriorityGaps: null,
+    },
     features: [
-      "3 analyses per month",
-      "Full 4-week roadmap",
+      "10 analyses per month",
+      "Full roadmap",
       "Curated learning resources",
       "Basic progress tracking",
     ],
-    cta: "Choose Starter",
   },
-  {
+  PRO: {
+    code: "PRO",
     id: "PRO",
     name: "Pro",
     tagline: "For students preparing to apply now",
-    price: { amount: 179, currency: "EGP", period: "month" },
-    analysesPerMonth: "unlimited_fair_use",
+    billingType: "RECURRING",
+    billingInterval: "MONTHLY",
+    pricePiastres: 17900,
+    currency: "EGP",
+    priceLabel: "179 EGP/month",
+    cta: "Go Pro",
+    highlighted: true,
+    paid: true,
+    fairUse: {
+      successfulAnalysesPerCycle: 50,
+      analysisStartsPerHour: 5,
+      label: "Unlimited analyses under fair-use policy",
+    },
+    entitlements: {
+      ...FREE_ENTITLEMENTS,
+      analysesPerCycle: 50,
+      analysisLimitLabel: "Unlimited analyses under fair-use policy",
+      fullRoadmap: true,
+      roadmapPreview: false,
+      curatedResources: true,
+      progressTracking: true,
+      projectBuilder: true,
+      evidenceBuilder: true,
+      reassessment: true,
+      fullAnalysisHistory: true,
+      jobSpecificRoadmaps: true,
+      topPriorityGaps: null,
+    },
     features: [
-      "Unlimited analyses (fair use)",
+      "Unlimited analyses under fair-use policy",
       "Job-specific roadmaps",
       "Portfolio Evidence Builder",
-      "Reassessment & before/after score",
+      "Reassessment and before/after score",
       "Full analysis history",
     ],
-    highlighted: true,
-    cta: "Go Pro",
   },
-  {
+  JOB_SPRINT: {
+    code: "JOB_SPRINT",
     id: "JOB_SPRINT",
     name: "Job Sprint",
     tagline: "One role, one deadline, one plan",
-    price: { amount: 299, currency: "EGP", period: "one_time" },
-    analysesPerMonth: "unlimited_fair_use",
+    billingType: "ONE_TIME",
+    billingInterval: "ONE_TIME",
+    pricePiastres: 29900,
+    currency: "EGP",
+    priceLabel: "299 EGP one-time",
+    cta: "Buy Job Sprint",
+    paid: true,
+    accessDays: 30,
+    fairUse: {
+      successfulAnalysesPerCycle: 50,
+      analysisStartsPerHour: 5,
+      label: "30 days of Pro access under fair-use policy",
+    },
+    entitlements: {
+      ...FREE_ENTITLEMENTS,
+      analysesPerCycle: 50,
+      analysisLimitLabel: "30 days of Pro access under fair-use policy",
+      fullRoadmap: true,
+      roadmapPreview: false,
+      curatedResources: true,
+      progressTracking: true,
+      projectBuilder: true,
+      evidenceBuilder: true,
+      reassessment: true,
+      fullAnalysisHistory: true,
+      jobSpecificRoadmaps: true,
+      topPriorityGaps: null,
+    },
     features: [
-      "30 days of Pro access",
+      "30 days of Pro access from manual activation",
       "One complete role-specific roadmap",
       "CV evidence checklist",
       "Portfolio project plan",
+      "Not a recurring subscription",
     ],
-    cta: "Start My Sprint",
   },
-  {
-    id: "ANNUAL_STUDENT",
-    name: "Annual Student",
-    tagline: "Best value for the whole academic year",
-    price: { amount: 899, currency: "EGP", period: "year" },
-    analysesPerMonth: "unlimited_fair_use",
-    features: ["Everything in Pro", "~75 EGP/month equivalent", "Priority support"],
-    cta: "Get Annual Access",
-  },
-];
+} satisfies Record<PlanCode, PlanConfig>;
 
-export function getPlan(id: PlanId): PlanConfig {
-  const plan = PRICING_PLANS.find((p) => p.id === id);
-  if (!plan) throw new Error(`Unknown plan: ${id}`);
-  return plan;
+export const PRICING_PLANS: PlanConfig[] = PLAN_CODES.map((code) => PLAN_CONFIG[code]);
+export const PAID_PLAN_CODES = PLAN_CODES.filter((code) => PLAN_CONFIG[code].paid) as Exclude<PlanCode, "FREE">[];
+
+export function isPlanCode(value: unknown): value is PlanCode {
+  return typeof value === "string" && (PLAN_CODES as readonly string[]).includes(value);
 }
 
-/** Free-tier gating: how many analyses a FREE plan user may create per rolling 30 days. */
-export const FREE_PLAN_MONTHLY_ANALYSIS_LIMIT = 1;
+export function toPlanCode(plan: Plan): PlanCode {
+  return isPlanCode(plan) ? plan : "FREE";
+}
+
+export function getPlan(code: PlanCode): PlanConfig {
+  return PLAN_CONFIG[code];
+}
+
+export function isPaidPlan(code: PlanCode) {
+  return PLAN_CONFIG[code].paid;
+}
+
+export function formatPiastres(amountPiastres: number) {
+  const amount = amountPiastres / 100;
+  return new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
+export function formatEgp(amountPiastres: number) {
+  return `${formatPiastres(amountPiastres)} EGP`;
+}

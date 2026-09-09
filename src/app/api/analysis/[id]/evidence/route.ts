@@ -4,14 +4,23 @@ import { prisma } from "@/lib/db/prisma";
 import { getOwnedAnalysis } from "@/lib/db/analysis";
 import { createEvidenceSchema } from "@/lib/validation/evidence";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { EntitlementError, assertFeature } from "@/lib/billing/entitlements";
 
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await ctx.params;
-  const { analysis } = await getOwnedAnalysis(id);
+  const { user, analysis } = await getOwnedAnalysis(id);
   if (!analysis) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  try {
+    await assertFeature(user, "evidenceBuilder");
+  } catch (error) {
+    if (error instanceof EntitlementError) {
+      return NextResponse.json({ error: error.message, code: error.code }, { status: error.status });
+    }
+    throw error;
+  }
 
   const evidence = await prisma.evidenceItem.findMany({
     where: { analysisId: id },

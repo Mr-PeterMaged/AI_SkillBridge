@@ -27,7 +27,7 @@ export function LandingNav() {
               <Link href="/sign-in">Sign in</Link>
             </Button>
             <Button asChild>
-              <Link href="/sign-up">Analyze My Skills</Link>
+              <Link href="/sign-up?redirect_url=/dashboard/analysis/new">Analyze My Skills</Link>
             </Button>
           </Show>
           <Show when="signed-in">

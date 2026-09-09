@@ -8,6 +8,7 @@ import { buildWeeklyCheckInPrompt, WEEKLY_CHECK_IN_RESPONSE_SCHEMA } from "@/lib
 import { weeklyCheckInResultSchema } from "@/lib/ai/schemas";
 import { getRoleTemplate } from "@/lib/roles";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { EntitlementError, assertFeature } from "@/lib/billing/entitlements";
 
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { userId } = await auth();
@@ -36,6 +37,14 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const { id } = await ctx.params;
   const { user, analysis } = await getOwnedAnalysis(id);
   if (!analysis) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  try {
+    await assertFeature(user, "progressTracking");
+  } catch (error) {
+    if (error instanceof EntitlementError) {
+      return NextResponse.json({ error: error.message, code: error.code }, { status: error.status });
+    }
+    throw error;
+  }
 
   const body = await req.json().catch(() => null);
   const parsed = createCheckInSchema.safeParse(body);

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Show } from "@clerk/nextjs";
 import { ArrowRight, Lock, Sparkles, ShieldCheck, Target, TrendingUp } from "lucide-react";
 
 const GRAIN =
@@ -49,13 +50,24 @@ export function Hero() {
         </p>
 
         <div className="animate-in fade-in slide-in-from-bottom-2 duration-700 delay-500 fill-mode-both mt-9 flex flex-wrap items-center justify-center gap-3">
-          <Link
-            href="/sign-up"
-            className="group inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-white bg-gradient-to-b from-white to-white/85 px-6 text-sm font-medium text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] transition-transform duration-300 hover:scale-[1.03] hover:shadow-[0_0_24px_rgba(186,208,255,0.35)]"
-          >
-            Analyze My Skills - Free
-            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-          </Link>
+          <Show when="signed-out">
+            <Link
+              href="/sign-up?redirect_url=/dashboard/analysis/new"
+              className="group inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-white bg-gradient-to-b from-white to-white/85 px-6 text-sm font-medium text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] transition-transform duration-300 hover:scale-[1.03] hover:shadow-[0_0_24px_rgba(186,208,255,0.35)]"
+            >
+              Analyze My Skills - Free
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          </Show>
+          <Show when="signed-in">
+            <Link
+              href="/dashboard/analysis/new"
+              className="group inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-white bg-gradient-to-b from-white to-white/85 px-6 text-sm font-medium text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] transition-transform duration-300 hover:scale-[1.03] hover:shadow-[0_0_24px_rgba(186,208,255,0.35)]"
+            >
+              Analyze My Skills - Free
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          </Show>
           <Link
             href="/dashboard/analysis/new"
             className="inline-flex h-11 items-center justify-center rounded-lg border border-white/25 bg-white/[0.06] px-6 text-sm font-medium text-white backdrop-blur-md transition-colors duration-300 hover:border-white/45 hover:bg-white/10"

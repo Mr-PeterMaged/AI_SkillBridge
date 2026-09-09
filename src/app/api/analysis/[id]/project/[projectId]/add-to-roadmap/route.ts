@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db/prisma";
 import { getOwnedAnalysis } from "@/lib/db/analysis";
+import { EntitlementError, assertFeature } from "@/lib/billing/entitlements";
 
 export async function POST(
   _req: NextRequest,
@@ -11,8 +12,16 @@ export async function POST(
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id, projectId } = await ctx.params;
-  const { analysis } = await getOwnedAnalysis(id);
+  const { user, analysis } = await getOwnedAnalysis(id);
   if (!analysis) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  try {
+    await assertFeature(user, "projectBuilder");
+  } catch (error) {
+    if (error instanceof EntitlementError) {
+      return NextResponse.json({ error: error.message, code: error.code }, { status: error.status });
+    }
+    throw error;
+  }
 
   const project = await prisma.projectRecommendation.findFirst({ where: { id: projectId, analysisId: id } });
   if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });

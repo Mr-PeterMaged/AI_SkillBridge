@@ -3,14 +3,23 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db/prisma";
 import { getOwnedAnalysis } from "@/lib/db/analysis";
 import { updateTaskSchema } from "@/lib/validation/analysis";
+import { EntitlementError, assertFeature } from "@/lib/billing/entitlements";
 
 export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string; taskId: string }> }) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id, taskId } = await ctx.params;
-  const { analysis } = await getOwnedAnalysis(id);
+  const { user, analysis } = await getOwnedAnalysis(id);
   if (!analysis) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  try {
+    await assertFeature(user, "progressTracking");
+  } catch (error) {
+    if (error instanceof EntitlementError) {
+      return NextResponse.json({ error: error.message, code: error.code }, { status: error.status });
+    }
+    throw error;
+  }
 
   const task = await prisma.roadmapTask.findFirst({
     where: { id: taskId, roadmapWeek: { roadmap: { analysisId: id } } },

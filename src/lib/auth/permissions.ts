@@ -40,6 +40,14 @@ export const PERMISSIONS = [
   "platform.settings.update",
   "billing.settings.read",
   "billing.settings.update",
+  "payment_request.read",
+  "payment_request.review",
+  "payment_request.approve",
+  "payment_request.reject",
+  "subscription.read",
+  "subscription.activate",
+  "subscription.extend",
+  "subscription.suspend",
   "audit.read",
 ] as const;
 
