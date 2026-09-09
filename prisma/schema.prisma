@@ -1,0 +1,257 @@
+// SkillBridge AI — database schema
+// Postgres (Neon) via Prisma. Run `npx prisma migrate dev` after setting DATABASE_URL.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------
+// Users are provisioned lazily on first authenticated request —
+// clerkUserId is the source of truth, this table mirrors it so we
+// can attach foreign keys and app-specific fields (plan, etc).
+// ---------------------------------------------------------------
+model User {
+  id          String   @id @default(cuid())
+  clerkUserId String   @unique
+  email       String   @unique
+  name        String?
+  plan        Plan     @default(FREE)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  analyses Analysis[]
+
+  @@index([clerkUserId])
+}
+
+enum Plan {
+  FREE
+  STARTER
+  PRO
+  JOB_SPRINT
+  ANNUAL_STUDENT
+}
+
+enum TargetRole {
+  JUNIOR_FRONTEND_DEVELOPER
+  JUNIOR_BACKEND_DEVELOPER
+  JUNIOR_DATA_ANALYST
+}
+
+enum ExperienceLevel {
+  STUDENT
+  FRESH_GRADUATE
+  JUNIOR
+}
+
+enum WeeklyHours {
+  H3
+  H5
+  H8
+  H10_PLUS
+}
+
+enum AnalysisStatus {
+  DRAFT
+  EXTRACTING
+  AWAITING_REVIEW
+  SCORED
+  ROADMAP_READY
+  FAILED
+}
+
+// One "SkillBridge run": a CV + a JD, evaluated against a target role.
+// Raw CV text is intentionally NOT stored once structured skills are
+// extracted and confirmed — see lib/db/retention.ts.
+model Analysis {
+  id              String          @id @default(cuid())
+  userId          String
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  targetRole      TargetRole
+  experienceLevel ExperienceLevel
+  weeklyHours     WeeklyHours
+
+  // Parsed input text. Nullable once purged (see privacy/delete flow).
+  cvText              String?
+  jobDescriptionText  String?
+
+  status          AnalysisStatus  @default(DRAFT)
+  readinessScore  Int?            // 0-100, computed server-side, never by the LLM
+  scoreBreakdown  Json?           // { criticalCoverage, importantCoverage, evidenceCoverage }
+  candidateSummary String?
+  jobSummary       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  candidateSkills  CandidateSkill[]
+  jobRequirements  JobRequirement[]
+  skillGaps        SkillGap[]
+  roadmap          Roadmap?
+  projectRecommendations ProjectRecommendation[]
+
+  @@index([userId])
+  @@index([userId, createdAt])
+}
+
+enum SkillCategory {
+  TECHNICAL
+  TOOL
+  SOFT
+}
+
+enum SkillStatus {
+  MATCHED
+  PARTIAL
+  MISSING
+  USER_ADDED
+}
+
+enum SkillMastery {
+  FAMILIAR
+  PRACTICED
+  PROVEN
+}
+
+model CandidateSkill {
+  id            String        @id @default(cuid())
+  analysisId    String
+  analysis      Analysis      @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  name          String
+  canonicalName String
+  category      SkillCategory
+  confidence    Float         @default(0)
+  status        SkillStatus   @default(MATCHED)
+  mastery       SkillMastery?
+  evidence      Json          @default("[]") // string[]
+  userConfirmed Boolean       @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([analysisId])
+}
+
+enum RequirementPriority {
+  CRITICAL
+  IMPORTANT
+  NICE_TO_HAVE
+}
+
+model JobRequirement {
+  id            String               @id @default(cuid())
+  analysisId    String
+  analysis      Analysis             @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  name          String
+  canonicalName String
+  category      SkillCategory
+  priority      RequirementPriority
+  evidence      Json                 @default("[]") // string[], quotes from the JD
+
+  createdAt DateTime @default(now())
+
+  @@index([analysisId])
+}
+
+model SkillGap {
+  id             String               @id @default(cuid())
+  analysisId     String
+  analysis       Analysis             @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  skillName      String
+  canonicalName  String
+  priority       RequirementPriority
+  reason         String               @db.Text
+  suggestedProof String               @db.Text
+  estimatedHours Int                  @default(4)
+
+  createdAt DateTime @default(now())
+
+  @@index([analysisId])
+}
+
+model Roadmap {
+  id            String   @id @default(cuid())
+  analysisId    String   @unique
+  analysis      Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  durationWeeks Int      @default(4)
+  createdAt     DateTime @default(now())
+
+  weeks RoadmapWeek[]
+}
+
+model RoadmapWeek {
+  id                 String  @id @default(cuid())
+  roadmapId          String
+  roadmap            Roadmap @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+
+  weekNumber         Int
+  focus              String
+  learningObjective  String  @db.Text
+  estimatedHours     Int
+  resources          Json    @default("[]") // { title, url }[]
+
+  tasks RoadmapTask[]
+
+  @@index([roadmapId])
+  @@unique([roadmapId, weekNumber])
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETE
+}
+
+enum EvidenceType {
+  GITHUB
+  DEMO_URL
+  PORTFOLIO_URL
+  CASE_STUDY
+  NOTE
+}
+
+model RoadmapTask {
+  id            String        @id @default(cuid())
+  roadmapWeekId String
+  roadmapWeek   RoadmapWeek   @relation(fields: [roadmapWeekId], references: [id], onDelete: Cascade)
+
+  title         String
+  description   String        @db.Text
+  status        TaskStatus    @default(PENDING)
+  completedAt   DateTime?
+
+  evidenceUrl   String?
+  evidenceType  EvidenceType?
+  notes         String?       @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([roadmapWeekId])
+}
+
+model ProjectRecommendation {
+  id               String   @id @default(cuid())
+  analysisId       String
+  analysis         Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  title            String
+  description      String   @db.Text
+  requiredSkills   Json     @default("[]") // string[]
+  deliverables     Json     @default("[]") // string[]
+  githubChecklist  Json     @default("[]") // string[]
+
+  createdAt DateTime @default(now())
+
+  @@index([analysisId])
+}

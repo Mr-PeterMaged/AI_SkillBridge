@@ -1,0 +1,370 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
+import { UploadCloud, FileText, Shield, ArrowRight, ArrowLeft } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
+import { LoadingSequence } from "@/components/analysis/loading-sequence";
+import { ROLE_LIST } from "@/lib/roles";
+import { createAnalysisSchema, CreateAnalysisInput } from "@/lib/validation/analysis";
+
+const STEP_LABELS = ["Career target", "Your profile", "Target job", "Confirm"];
+
+const EXPERIENCE_OPTIONS = [
+  { value: "STUDENT", label: "Student" },
+  { value: "FRESH_GRADUATE", label: "Fresh Graduate" },
+  { value: "JUNIOR", label: "Junior" },
+] as const;
+
+const HOURS_OPTIONS = [
+  { value: "H3", label: "3 hours / week" },
+  { value: "H5", label: "5 hours / week" },
+  { value: "H8", label: "8 hours / week" },
+  { value: "H10_PLUS", label: "10+ hours / week" },
+] as const;
+
+export default function NewAnalysisPage() {
+  const router = useRouter();
+  const [step, setStep] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+  const [parsing, setParsing] = useState(false);
+  const [fileName, setFileName] = useState<string | null>(null);
+
+  const form = useForm<CreateAnalysisInput>({
+    resolver: zodResolver(createAnalysisSchema),
+    defaultValues: {
+      targetRole: "JUNIOR_FRONTEND_DEVELOPER",
+      experienceLevel: "STUDENT",
+      weeklyHours: "H5",
+      cvText: "",
+      jobDescriptionText: "",
+    },
+    mode: "onChange",
+  });
+
+  const { register, watch, setValue, trigger, formState, handleSubmit } = form;
+  const targetRole = watch("targetRole");
+
+  async function goNext() {
+    const fieldsByStep: (keyof CreateAnalysisInput)[][] = [
+      ["targetRole", "experienceLevel", "weeklyHours"],
+      ["cvText"],
+      ["jobDescriptionText"],
+      [],
+    ];
+    const valid = await trigger(fieldsByStep[step]);
+    if (valid) setStep((s) => Math.min(s + 1, STEP_LABELS.length - 1));
+  }
+
+  function goBack() {
+    setStep((s) => Math.max(s - 1, 0));
+  }
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File is too large. Max size is 5MB.");
+      return;
+    }
+
+    setParsing(true);
+    setFileName(file.name);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/parse", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Couldn't read this file. Please paste your CV text instead.");
+        setFileName(null);
+        return;
+      }
+      setValue("cvText", data.text, { shouldValidate: true });
+      toast.success("CV parsed successfully — review the text below.");
+    } catch {
+      toast.error("Something went wrong reading this file. Please paste your CV text instead.");
+      setFileName(null);
+    } finally {
+      setParsing(false);
+    }
+  }
+
+  function useJobTemplate() {
+    const role = ROLE_LIST.find((r) => r.id === targetRole);
+    if (role) {
+      setValue("jobDescriptionText", role.jobDescriptionTemplate, { shouldValidate: true });
+      toast.success("Template applied — personalize it for a more accurate analysis.");
+    }
+  }
+
+  const onSubmit = async (values: CreateAnalysisInput) => {
+    setSubmitting(true);
+    try {
+      const createRes = await fetch("/api/analysis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+      });
+      const created = await createRes.json();
+      if (!createRes.ok) {
+        toast.error(created.error ?? "Couldn't create your analysis.");
+        setSubmitting(false);
+        return;
+      }
+
+      const extractRes = await fetch(`/api/analysis/${created.id}/extract`, { method: "POST" });
+      const extracted = await extractRes.json();
+      if (!extractRes.ok) {
+        toast.error(extracted.error ?? "Couldn't analyze your CV. Please try again.");
+        setSubmitting(false);
+        router.push(`/dashboard/analysis/${created.id}/review`);
+        return;
+      }
+
+      router.push(`/dashboard/analysis/${created.id}/review`);
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+      setSubmitting(false);
+    }
+  };
+
+  if (submitting) {
+    return <LoadingSequence />;
+  }
+
+  return (
+    <div className="mx-auto max-w-2xl">
+      <div className="mb-8">
+        <div className="flex items-center gap-2">
+          {STEP_LABELS.map((label, i) => (
+            <div key={label} className="flex flex-1 items-center gap-2">
+              <div
+                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-medium ${
+                  i <= step ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {i + 1}
+              </div>
+              {i < STEP_LABELS.length - 1 && (
+                <div className={`h-px flex-1 ${i < step ? "bg-primary" : "bg-border"}`} />
+              )}
+            </div>
+          ))}
+        </div>
+        <p className="mt-2 text-sm font-medium text-muted-foreground">{STEP_LABELS[step]}</p>
+      </div>
+
+      <form onSubmit={handleSubmit(onSubmit)}>
+        {step === 0 && (
+          <div className="space-y-6">
+            <div>
+              <Label className="mb-3 block text-base">Target role</Label>
+              <RadioGroup
+                value={targetRole}
+                onValueChange={(v) => setValue("targetRole", v as CreateAnalysisInput["targetRole"], { shouldValidate: true })}
+                className="grid gap-3 sm:grid-cols-1"
+              >
+                {ROLE_LIST.map((role) => (
+                  <Label
+                    key={role.id}
+                    htmlFor={role.id}
+                    className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 ${
+                      targetRole === role.id ? "border-primary bg-primary/5" : "border-border"
+                    }`}
+                  >
+                    <RadioGroupItem value={role.id} id={role.id} className="mt-0.5" />
+                    <span>
+                      <span className="block font-medium">{role.label}</span>
+                      <span className="block text-sm text-muted-foreground">{role.description}</span>
+                    </span>
+                  </Label>
+                ))}
+              </RadioGroup>
+            </div>
+
+            <div>
+              <Label className="mb-3 block text-base">Experience level</Label>
+              <RadioGroup
+                value={watch("experienceLevel")}
+                onValueChange={(v) => setValue("experienceLevel", v as CreateAnalysisInput["experienceLevel"], { shouldValidate: true })}
+                className="flex flex-wrap gap-3"
+              >
+                {EXPERIENCE_OPTIONS.map((opt) => (
+                  <Label
+                    key={opt.value}
+                    htmlFor={`exp-${opt.value}`}
+                    className={`cursor-pointer rounded-full border px-4 py-2 text-sm ${
+                      watch("experienceLevel") === opt.value ? "border-primary bg-primary/5" : "border-border"
+                    }`}
+                  >
+                    <RadioGroupItem value={opt.value} id={`exp-${opt.value}`} className="sr-only" />
+                    {opt.label}
+                  </Label>
+                ))}
+              </RadioGroup>
+            </div>
+
+            <div>
+              <Label className="mb-3 block text-base">Study time available per week</Label>
+              <RadioGroup
+                value={watch("weeklyHours")}
+                onValueChange={(v) => setValue("weeklyHours", v as CreateAnalysisInput["weeklyHours"], { shouldValidate: true })}
+                className="flex flex-wrap gap-3"
+              >
+                {HOURS_OPTIONS.map((opt) => (
+                  <Label
+                    key={opt.value}
+                    htmlFor={`hrs-${opt.value}`}
+                    className={`cursor-pointer rounded-full border px-4 py-2 text-sm ${
+                      watch("weeklyHours") === opt.value ? "border-primary bg-primary/5" : "border-border"
+                    }`}
+                  >
+                    <RadioGroupItem value={opt.value} id={`hrs-${opt.value}`} className="sr-only" />
+                    {opt.label}
+                  </Label>
+                ))}
+              </RadioGroup>
+            </div>
+          </div>
+        )}
+
+        {step === 1 && (
+          <div className="space-y-4">
+            <Alert>
+              <Shield className="h-4 w-4" />
+              <AlertDescription>
+                Your CV is used only to generate your personal analysis — never to train a public model. You can
+                delete it anytime.
+              </AlertDescription>
+            </Alert>
+
+            <label
+              htmlFor="cv-upload"
+              className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border p-8 text-center hover:bg-muted/50"
+            >
+              <UploadCloud className="h-6 w-6 text-muted-foreground" />
+              <span className="text-sm font-medium">
+                {parsing ? "Reading your file…" : fileName ? fileName : "Upload PDF or DOCX"}
+              </span>
+              <span className="text-xs text-muted-foreground">Max 5MB</span>
+              <input
+                id="cv-upload"
+                type="file"
+                accept=".pdf,.docx"
+                className="hidden"
+                onChange={handleFileUpload}
+                disabled={parsing}
+              />
+            </label>
+
+            <div className="relative">
+              <Separator />
+              <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-background px-2 text-xs text-muted-foreground">
+                or paste text
+              </span>
+            </div>
+
+            <Textarea
+              rows={10}
+              placeholder="Paste your CV or profile text here — education, projects, experience, skills…"
+              {...register("cvText")}
+            />
+            {formState.errors.cvText && (
+              <p className="text-sm text-destructive">{formState.errors.cvText.message}</p>
+            )}
+          </div>
+        )}
+
+        {step === 2 && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label>Job description</Label>
+              <Button type="button" variant="outline" size="sm" onClick={useJobTemplate} className="gap-1.5">
+                <FileText className="h-3.5 w-3.5" /> Use a template
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Pasting a real job post from a company you&apos;re interested in gives more personalized results
+              than using a template alone.
+            </p>
+            <Textarea
+              rows={14}
+              placeholder="Paste the full job description here…"
+              {...register("jobDescriptionText")}
+            />
+            {formState.errors.jobDescriptionText && (
+              <p className="text-sm text-destructive">{formState.errors.jobDescriptionText.message}</p>
+            )}
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="space-y-4">
+            <div className="rounded-xl border border-border p-5">
+              <dl className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Target role</dt>
+                  <dd className="font-medium">{ROLE_LIST.find((r) => r.id === targetRole)?.label}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Experience level</dt>
+                  <dd className="font-medium">
+                    {EXPERIENCE_OPTIONS.find((o) => o.value === watch("experienceLevel"))?.label}
+                  </dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Study time</dt>
+                  <dd className="font-medium">
+                    {HOURS_OPTIONS.find((o) => o.value === watch("weeklyHours"))?.label}
+                  </dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">CV length</dt>
+                  <dd className="font-medium">{watch("cvText").length.toLocaleString()} characters</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Job description length</dt>
+                  <dd className="font-medium">{watch("jobDescriptionText").length.toLocaleString()} characters</dd>
+                </div>
+              </dl>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              This score is a learning and preparation indicator. It is not a hiring decision.
+            </p>
+          </div>
+        )}
+
+        <div className="mt-8 flex justify-between">
+          {step > 0 ? (
+            <Button type="button" variant="outline" onClick={goBack} className="gap-1.5">
+              <ArrowLeft className="h-4 w-4" /> Back
+            </Button>
+          ) : (
+            <span />
+          )}
+
+          {step < STEP_LABELS.length - 1 ? (
+            <Button type="button" onClick={goNext} className="gap-1.5">
+              Continue <ArrowRight className="h-4 w-4" />
+            </Button>
+          ) : (
+            <Button type="submit" className="gap-1.5">
+              Analyze My Skill Gap <ArrowRight className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      </form>
+    </div>
+  );
+}
