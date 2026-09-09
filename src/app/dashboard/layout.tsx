@@ -3,8 +3,13 @@ import { UserButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { BriefcaseBusiness, ClipboardCheck, Plus, Settings } from "lucide-react";
+import { getCurrentPlatformMember } from "@/lib/auth/admin";
+import { hasPermission, roleLabel } from "@/lib/auth/permissions";
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const member = await getCurrentPlatformMember().catch(() => null);
+  const showAdmin = member?.status === "ACTIVE" && hasPermission(member.role, "admin.dashboard.view");
+
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur">
@@ -17,6 +22,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </Link>
 
           <div className="flex items-center gap-3">
+            {showAdmin && (
+              <>
+                <Button size="sm" variant="ghost" className="hidden gap-1.5 lg:inline-flex" asChild>
+                  <Link href="/dashboard/admin">Admin</Link>
+                </Button>
+                <span className="hidden rounded-full border border-primary/25 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary sm:inline-flex">
+                  {roleLabel(member.role)}
+                </span>
+              </>
+            )}
             <Button size="sm" variant="ghost" className="hidden gap-1.5 sm:inline-flex" asChild>
               <Link href="/dashboard/quizzes">
                 <ClipboardCheck className="h-4 w-4" /> Quizzes

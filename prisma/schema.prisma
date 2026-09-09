@@ -24,10 +24,12 @@ model User {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  analyses        Analysis[]
-  quizAttempts    QuizAttempt[]
-  weeklyCheckIns  WeeklyCheckIn[]
-  jobApplications JobApplication[]
+  analyses             Analysis[]
+  quizAttempts         QuizAttempt[]
+  weeklyCheckIns       WeeklyCheckIn[]
+  jobApplications      JobApplication[]
+  promoRedemptions     PromoRedemption[]
+  referralAttributions ReferralAttribution[]
 
   @@index([clerkUserId])
 }
@@ -449,4 +451,276 @@ model JobApplication {
 
   @@index([userId, createdAt])
   @@index([analysisId])
+}
+
+enum PlatformRole {
+  OWNER
+  ADMIN
+  MARKETING_MANAGER
+  SUPPORT_MANAGER
+  ANALYST
+  VIEWER
+  USER
+}
+
+enum MemberStatus {
+  ACTIVE
+  INVITED
+  SUSPENDED
+  REMOVED
+}
+
+enum TeamInviteStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+model PlatformMember {
+  id                String       @id @default(cuid())
+  clerkUserId       String       @unique
+  email             String?
+  displayName       String?
+  role              PlatformRole @default(USER)
+  status            MemberStatus @default(ACTIVE)
+  invitedByMemberId String?
+  invitedAt         DateTime?
+  joinedAt          DateTime?
+  suspendedAt       DateTime?
+  removedAt         DateTime?
+  lastRoleChangedAt DateTime?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  invitedBy       PlatformMember?  @relation("MemberInviter", fields: [invitedByMemberId], references: [id], onDelete: SetNull)
+  invitedMembers  PlatformMember[] @relation("MemberInviter")
+  invites         TeamInvite[]
+  auditLogs       AdminAuditLog[]  @relation("AuditActor")
+  targetAuditLogs AdminAuditLog[]  @relation("AuditTargetMember")
+
+  @@index([role, status])
+  @@index([email])
+}
+
+model TeamInvite {
+  id                String           @id @default(cuid())
+  email             String
+  role              PlatformRole
+  status            TeamInviteStatus @default(PENDING)
+  tokenHash         String           @unique
+  expiresAt         DateTime
+  acceptedAt        DateTime?
+  revokedAt         DateTime?
+  invitedByMemberId String
+  note              String?          @db.Text
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  invitedBy PlatformMember @relation(fields: [invitedByMemberId], references: [id], onDelete: Restrict)
+
+  @@index([email, status])
+  @@index([expiresAt])
+}
+
+model AdminAuditLog {
+  id             String   @id @default(cuid())
+  actorMemberId  String?
+  targetMemberId String?
+  action         String
+  entityType     String
+  entityId       String?
+  before         Json?
+  after          Json?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  actor        PlatformMember? @relation("AuditActor", fields: [actorMemberId], references: [id], onDelete: SetNull)
+  targetMember PlatformMember? @relation("AuditTargetMember", fields: [targetMemberId], references: [id], onDelete: SetNull)
+
+  @@index([actorMemberId, createdAt])
+  @@index([targetMemberId, createdAt])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+enum PromoStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+enum PromoDuration {
+  ONCE
+  REPEATING
+  FOREVER
+}
+
+enum PromoRedemptionStatus {
+  PENDING
+  REDEEMED
+  FAILED
+  REFUNDED
+  REVOKED
+}
+
+enum CampaignStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum AmbassadorStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+model PromoCampaign {
+  id            String         @id @default(cuid())
+  name          String
+  slug          String         @unique
+  description   String?        @db.Text
+  status        CampaignStatus @default(ACTIVE)
+  startsAt      DateTime?
+  endsAt        DateTime?
+  internalNotes String?        @db.Text
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  promoCodes   PromoCode[]
+  ambassadors  Ambassador[]
+  redemptions  PromoRedemption[]
+  attributions ReferralAttribution[]
+
+  @@index([status])
+  @@index([startsAt, endsAt])
+}
+
+model Ambassador {
+  id           String           @id @default(cuid())
+  campaignId   String?
+  campaign     PromoCampaign?   @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  name         String
+  organization String?
+  publicHandle String           @unique
+  contactEmail String?
+  referralKey  String           @unique
+  status       AmbassadorStatus @default(ACTIVE)
+  notes        String?          @db.Text
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  promoCodes   PromoCode[]
+  redemptions  PromoRedemption[]
+  attributions ReferralAttribution[]
+
+  @@index([campaignId])
+  @@index([status])
+}
+
+model PromoCode {
+  id                     String         @id @default(cuid())
+  code                   String         @unique
+  status                 PromoStatus    @default(ACTIVE)
+  discountType           DiscountType
+  discountAmount         Int
+  currency               String?
+  duration               PromoDuration
+  durationMonths         Int?
+  eligiblePlans          Json           @default("[]")
+  maxRedemptions         Int?
+  perUserRedemptionLimit Int            @default(1)
+  redemptionCount        Int            @default(0)
+  startsAt               DateTime?
+  expiresAt              DateTime?
+  firstTimeCustomersOnly Boolean        @default(false)
+  internalOnly           Boolean        @default(false)
+  internalNotes          String?        @db.Text
+  campaignId             String?
+  campaign               PromoCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  ambassadorId           String?
+  ambassador             Ambassador?    @relation(fields: [ambassadorId], references: [id], onDelete: SetNull)
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+
+  redemptions  PromoRedemption[]
+  attributions ReferralAttribution[]
+
+  @@index([status])
+  @@index([campaignId])
+  @@index([ambassadorId])
+  @@index([expiresAt])
+  @@index([startsAt])
+}
+
+model PromoRedemption {
+  id                     String                @id @default(cuid())
+  promoCodeId            String
+  promoCode              PromoCode             @relation(fields: [promoCodeId], references: [id], onDelete: Restrict)
+  campaignId             String?
+  campaign               PromoCampaign?        @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  ambassadorId           String?
+  ambassador             Ambassador?           @relation(fields: [ambassadorId], references: [id], onDelete: SetNull)
+  userId                 String?
+  user                   User?                 @relation(fields: [userId], references: [id], onDelete: SetNull)
+  plan                   Plan?
+  discountTypeSnapshot   DiscountType
+  discountAmountSnapshot Int
+  currencySnapshot       String?
+  grossAmountCents       Int                   @default(0)
+  discountAmountCents    Int                   @default(0)
+  netAmountCents         Int                   @default(0)
+  status                 PromoRedemptionStatus @default(REDEEMED)
+  checkoutId             String?
+  providerReference      String?
+  redeemedAt             DateTime              @default(now())
+  refundedAt             DateTime?
+  createdAt              DateTime              @default(now())
+
+  @@index([promoCodeId, redeemedAt])
+  @@index([campaignId, redeemedAt])
+  @@index([ambassadorId, redeemedAt])
+  @@index([userId])
+  @@index([status, redeemedAt])
+}
+
+model ReferralAttribution {
+  id           String         @id @default(cuid())
+  promoCodeId  String?
+  promoCode    PromoCode?     @relation(fields: [promoCodeId], references: [id], onDelete: SetNull)
+  campaignId   String?
+  campaign     PromoCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  ambassadorId String?
+  ambassador   Ambassador?    @relation(fields: [ambassadorId], references: [id], onDelete: SetNull)
+  userId       String?
+  user         User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  anonymousKey String?
+  eventType    String
+  createdAt    DateTime       @default(now())
+
+  @@index([promoCodeId, createdAt])
+  @@index([campaignId, createdAt])
+  @@index([ambassadorId, createdAt])
+  @@index([userId])
+  @@index([eventType, createdAt])
+}
+
+model PromoAuditLog {
+  id          String   @id @default(cuid())
+  adminUserId String?
+  action      String
+  entityType  String
+  entityId    String?
+  before      Json?
+  after       Json?
+  createdAt   DateTime @default(now())
+
+  @@index([adminUserId, createdAt])
+  @@index([entityType, entityId])
 }
