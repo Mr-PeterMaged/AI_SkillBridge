@@ -9,7 +9,19 @@ const LABELS: Record<string, string> = {
   FAILED: "Failed",
 };
 
+const CLASSES: Record<string, string> = {
+  DRAFT: "bg-secondary text-secondary-foreground",
+  EXTRACTING: "bg-ai/15 text-ai",
+  AWAITING_REVIEW: "bg-partial/20 text-partial-foreground",
+  SCORED: "bg-matched/15 text-matched",
+  ROADMAP_READY: "bg-ai text-ai-foreground",
+  FAILED: "bg-critical/15 text-critical",
+};
+
 export function StatusBadge({ status }: { status: string }) {
-  const variant = status === "FAILED" ? "destructive" : status === "ROADMAP_READY" ? "default" : "secondary";
-  return <Badge variant={variant}>{LABELS[status] ?? status}</Badge>;
+  return (
+    <Badge className={CLASSES[status] ?? "bg-secondary text-secondary-foreground"}>
+      {LABELS[status] ?? status}
+    </Badge>
+  );
 }

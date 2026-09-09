@@ -1,95 +1,87 @@
 import Link from "next/link";
-import { ArrowRight, Code2, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { ArrowRight, Lock, Sparkles, ShieldCheck, Target } from "lucide-react";
+
+const GRAIN =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E";
+
+const trustItems = [
+  { icon: ShieldCheck, title: "Deterministic readiness score — never an AI guess" },
+  { icon: Lock, title: "Your CV stays private, never used to train models" },
+  { icon: Target, title: "Curated for 3 real junior roles, not generic advice" },
+];
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden border-b border-border/60">
+    <section className="relative isolate overflow-hidden bg-[#050505] text-white">
       <div
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[480px] bg-[radial-gradient(ellipse_at_top,_var(--accent)_0%,_transparent_65%)]"
+        className="pointer-events-none absolute inset-0 z-20 opacity-[0.05] mix-blend-overlay"
+        style={{ backgroundImage: `url("${GRAIN}")` }}
         aria-hidden
       />
-      <div className="mx-auto grid max-w-6xl gap-12 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-2 lg:items-center lg:py-28">
-        <div>
-          <Badge variant="secondary" className="mb-5 gap-1.5 rounded-full px-3 py-1">
-            <Sparkles className="h-3.5 w-3.5" />
-            Built for students &amp; fresh graduates in Egypt &amp; MENA
-          </Badge>
+      <div
+        className="pointer-events-none absolute -top-40 left-1/2 z-0 h-[560px] w-[560px] -translate-x-1/2 rounded-full bg-primary/25 blur-[130px]"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute -bottom-24 right-0 z-0 h-[420px] w-[420px] rounded-full bg-ai/25 blur-[120px]"
+        aria-hidden
+      />
 
-          <h1 className="text-4xl font-bold tracking-tight text-balance sm:text-5xl lg:text-[3.25rem] lg:leading-[1.1]">
-            Stop taking random courses. Build the skills your target role actually needs.
-          </h1>
+      <div className="relative z-10 mx-auto flex min-h-[600px] max-w-3xl flex-col items-center justify-end px-6 pb-14 pt-24 text-center sm:min-h-[680px] sm:pb-20">
+        <span className="animate-in fade-in zoom-in-95 duration-700 fill-mode-both mb-6 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-4 py-1.5 text-xs font-medium text-white/80 backdrop-blur">
+          <Sparkles className="h-3.5 w-3.5 text-ai" />
+          Built for students &amp; fresh graduates
+        </span>
 
-          <p className="mt-5 max-w-xl text-lg text-muted-foreground text-pretty">
-            Upload your CV and a real job description. SkillBridge AI shows exactly which skills you
-            already prove, which gaps matter most, and gives you a 4-week roadmap with portfolio
-            evidence to close them — not just a list of missing keywords.
-          </p>
+        <h1 className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150 fill-mode-both text-4xl leading-[1.12] font-medium tracking-tight text-balance sm:text-6xl">
+          <span className="block overflow-hidden py-1">Know your real skill gap.</span>
+          <span className="block overflow-hidden py-1">
+            Close it with a{" "}
+            <em
+              className="text-white/55"
+              style={{ fontFamily: "var(--font-serif-accent)", fontStyle: "italic" }}
+            >
+              plan
+            </em>
+            .
+          </span>
+        </h1>
 
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Button size="lg" className="gap-2" asChild>
-              <Link href="/sign-up">
-                Analyze My Skills <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-            <Button size="lg" variant="outline" asChild>
-              <Link href="/#how-it-works">See how it works</Link>
-            </Button>
+        <p className="animate-in fade-in slide-in-from-bottom-3 duration-700 delay-300 fill-mode-both mt-6 max-w-lg text-base text-white/60 sm:text-lg">
+          Upload your CV and a real job description. SkillBridge AI shows exactly which skills you
+          already prove, which gaps matter most, and hands you a 4-week roadmap with portfolio
+          evidence to close them.
+        </p>
+
+        <div className="animate-in fade-in slide-in-from-bottom-2 duration-700 delay-500 fill-mode-both mt-9 flex flex-wrap items-center justify-center gap-3">
+          <Link
+            href="/sign-up"
+            className="group inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-white bg-gradient-to-b from-white to-white/85 px-6 text-sm font-medium text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] transition-transform duration-300 hover:scale-[1.03] hover:shadow-[0_0_24px_rgba(186,208,255,0.35)]"
+          >
+            Analyze My Skills
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+          </Link>
+          <Link
+            href="/#how-it-works"
+            className="inline-flex h-11 items-center justify-center rounded-lg border border-white/25 bg-white/[0.06] px-6 text-sm font-medium text-white backdrop-blur-md transition-colors duration-300 hover:border-white/45 hover:bg-white/10"
+          >
+            See how it works
+          </Link>
+        </div>
+      </div>
+
+      <div className="relative z-10 mx-auto grid max-w-3xl grid-cols-1 gap-4 border-t border-white/10 px-6 py-7 text-center sm:grid-cols-3 sm:text-left">
+        {trustItems.map((item, i) => (
+          <div
+            key={item.title}
+            className="animate-in fade-in slide-in-from-bottom-2 fill-mode-both flex items-center justify-center gap-2.5 duration-700 sm:justify-start"
+            style={{ animationDelay: `${650 + i * 120}ms` }}
+          >
+            <item.icon className="h-4 w-4 shrink-0 text-white/45" />
+            <span className="text-xs text-white/60 sm:text-[13px]">{item.title}</span>
           </div>
-
-          <p className="mt-4 text-xs text-muted-foreground">
-            Free to try · No credit card required · Your CV stays private
-          </p>
-        </div>
-
-        <div className="relative mx-auto w-full max-w-md">
-          <ScoreCardPreview />
-        </div>
+        ))}
       </div>
     </section>
-  );
-}
-
-function ScoreCardPreview() {
-  return (
-    <div className="rounded-2xl border border-border bg-card p-6 shadow-xl shadow-primary/5">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs font-medium text-muted-foreground">Junior Frontend Developer</p>
-          <p className="text-sm font-semibold">Readiness Snapshot</p>
-        </div>
-        <Badge className="bg-primary/10 text-primary hover:bg-primary/10">Preview</Badge>
-      </div>
-
-      <div className="mt-6 flex items-end gap-3">
-        <span className="text-5xl font-bold tabular-nums">62%</span>
-        <span className="mb-1.5 text-sm text-muted-foreground">ready for this role</span>
-      </div>
-
-      <div className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-muted">
-        <div className="h-full rounded-full bg-primary" style={{ width: "62%" }} />
-      </div>
-
-      <div className="mt-6 space-y-2 text-sm">
-        <div className="flex items-center justify-between rounded-lg bg-success/10 px-3 py-2">
-          <span className="font-medium text-success-foreground/80">React, JavaScript, Git</span>
-          <span className="text-xs font-medium text-success-foreground/70">Matched</span>
-        </div>
-        <div className="flex items-center justify-between rounded-lg bg-destructive/10 px-3 py-2">
-          <span className="font-medium">TypeScript, Testing</span>
-          <span className="text-xs font-medium text-destructive">Critical gap</span>
-        </div>
-        <div className="flex items-center justify-between rounded-lg bg-warning/15 px-3 py-2">
-          <span className="font-medium">Deployment</span>
-          <span className="text-xs font-medium text-warning-foreground/80">Important gap</span>
-        </div>
-      </div>
-
-      <div className="mt-6 flex items-center gap-2 rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
-        <Code2 className="h-4 w-4 shrink-0" />
-        Next step: build a typed React project with tests and a live deploy link.
-      </div>
-    </div>
   );
 }

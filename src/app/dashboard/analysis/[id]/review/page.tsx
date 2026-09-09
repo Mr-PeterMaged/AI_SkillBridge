@@ -3,7 +3,7 @@
 import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, X, Loader2, Sparkles } from "lucide-react";
+import { Plus, X, Loader2, Sparkles, FileWarning } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LoadingSequence } from "@/components/analysis/loading-sequence";
+import { AnalysisSkeleton } from "@/components/analysis/analysis-skeleton";
+import { EmptyNotice } from "@/components/analysis/empty-notice";
 import { AnalysisDTO, CandidateSkillDTO } from "@/lib/types/analysis";
 
 type ReviewSkill = {
@@ -155,13 +157,25 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     }
   }
 
-  if (loading) return <LoadingSequence />;
-  if (!analysis) return <p className="text-muted-foreground">Analysis not found.</p>;
+  if (loading) return <AnalysisSkeleton />;
+  if (!analysis) {
+    return (
+      <EmptyNotice
+        icon={FileWarning}
+        title="Analysis not found"
+        description="This analysis may have been deleted, or you don't have access to it."
+        action={{ href: "/dashboard", label: "Back to dashboard" }}
+      />
+    );
+  }
 
   if (analysis.status === "DRAFT" || analysis.status === "FAILED") {
     return (
-      <div className="mx-auto max-w-md py-16 text-center">
-        <p className="font-medium">We haven&apos;t analyzed this profile yet.</p>
+      <div className="mx-auto flex max-w-md flex-col items-center py-16 text-center">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
+          <Sparkles className="h-5 w-5" />
+        </div>
+        <p className="mt-5 font-medium">We haven&apos;t analyzed this profile yet.</p>
         <p className="mt-1 text-sm text-muted-foreground">
           {analysis.status === "FAILED"
             ? "The last attempt failed. This can happen if the AI service is temporarily unavailable."

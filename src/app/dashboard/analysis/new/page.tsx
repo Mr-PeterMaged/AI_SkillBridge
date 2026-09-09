@@ -5,7 +5,18 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { UploadCloud, FileText, Shield, ArrowRight, ArrowLeft } from "lucide-react";
+import {
+  UploadCloud,
+  FileText,
+  Shield,
+  ArrowRight,
+  ArrowLeft,
+  Target,
+  User,
+  Briefcase,
+  Sparkles,
+  Check,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -14,10 +25,14 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { LoadingSequence } from "@/components/analysis/loading-sequence";
-import { ROLE_LIST } from "@/lib/roles";
+import { ROLE_LIST, getRoleTemplate } from "@/lib/roles";
 import { createAnalysisSchema, CreateAnalysisInput } from "@/lib/validation/analysis";
 
-const STEP_LABELS = ["Career target", "Your profile", "Target job", "Confirm"];
+const STEPS = [
+  { label: "Career Goal", icon: Target },
+  { label: "Your Profile", icon: User },
+  { label: "Target Job", icon: Briefcase },
+] as const;
 
 const EXPERIENCE_OPTIONS = [
   { value: "STUDENT", label: "Student" },
@@ -31,6 +46,16 @@ const HOURS_OPTIONS = [
   { value: "H8", label: "8 hours / week" },
   { value: "H10_PLUS", label: "10+ hours / week" },
 ] as const;
+
+const DEMO_CV_TEXT = `Ahmed Youssef — Computer Science student, Cairo University (expected graduation 2026)
+
+- Built and deployed a personal portfolio site using HTML, CSS, and vanilla JavaScript.
+- Completed a self-paced React course and built a to-do list app using component state, props, and conditional rendering.
+- Comfortable with Git and GitHub — used feature branches and opened pull requests during a 3-person class project.
+- Built a small weather app that fetches from a public REST API and shows loading and error states.
+- Currently learning TypeScript by converting existing JavaScript components one at a time.
+- Worked in a 4-person team on a semester-long capstone project and presented the results to faculty.
+- Comfortable with basic HTML/CSS responsive layouts using Flexbox.`;
 
 export default function NewAnalysisPage() {
   const router = useRouter();
@@ -59,14 +84,25 @@ export default function NewAnalysisPage() {
       ["targetRole", "experienceLevel", "weeklyHours"],
       ["cvText"],
       ["jobDescriptionText"],
-      [],
     ];
     const valid = await trigger(fieldsByStep[step]);
-    if (valid) setStep((s) => Math.min(s + 1, STEP_LABELS.length - 1));
+    if (valid) setStep((s) => Math.min(s + 1, STEPS.length - 1));
   }
 
   function goBack() {
     setStep((s) => Math.max(s - 1, 0));
+  }
+
+  function fillDemoData() {
+    const demoRole = getRoleTemplate("JUNIOR_FRONTEND_DEVELOPER");
+    setValue("targetRole", "JUNIOR_FRONTEND_DEVELOPER", { shouldValidate: true });
+    setValue("experienceLevel", "STUDENT", { shouldValidate: true });
+    setValue("weeklyHours", "H5", { shouldValidate: true });
+    setValue("cvText", DEMO_CV_TEXT, { shouldValidate: true });
+    setValue("jobDescriptionText", demoRole.jobDescriptionTemplate, { shouldValidate: true });
+    setFileName(null);
+    setStep(STEPS.length - 1);
+    toast.success("Demo profile loaded — review and analyze whenever you're ready.");
   }
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -145,27 +181,25 @@ export default function NewAnalysisPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <div className="mb-8">
-        <div className="flex items-center gap-2">
-          {STEP_LABELS.map((label, i) => (
-            <div key={label} className="flex flex-1 items-center gap-2">
-              <div
-                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-medium ${
-                  i <= step ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                }`}
-              >
-                {i + 1}
-              </div>
-              {i < STEP_LABELS.length - 1 && (
-                <div className={`h-px flex-1 ${i < step ? "bg-primary" : "bg-border"}`} />
-              )}
-            </div>
-          ))}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold">New skill-gap analysis</h1>
+          <p className="text-sm text-muted-foreground">Three quick steps to your readiness score.</p>
         </div>
-        <p className="mt-2 text-sm font-medium text-muted-foreground">{STEP_LABELS[step]}</p>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={fillDemoData}
+          className="gap-1.5 border-ai/30 text-ai hover:bg-ai/10 hover:text-ai"
+        >
+          <Sparkles className="h-3.5 w-3.5" /> Try Demo: Junior Frontend Developer
+        </Button>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)}>
+      <Stepper step={step} />
+
+      <form onSubmit={handleSubmit(onSubmit)} className="mt-8">
         {step === 0 && (
           <div className="space-y-6">
             <div>
@@ -179,8 +213,8 @@ export default function NewAnalysisPage() {
                   <Label
                     key={role.id}
                     htmlFor={role.id}
-                    className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 ${
-                      targetRole === role.id ? "border-primary bg-primary/5" : "border-border"
+                    className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${
+                      targetRole === role.id ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40"
                     }`}
                   >
                     <RadioGroupItem value={role.id} id={role.id} className="mt-0.5" />
@@ -204,8 +238,8 @@ export default function NewAnalysisPage() {
                   <Label
                     key={opt.value}
                     htmlFor={`exp-${opt.value}`}
-                    className={`cursor-pointer rounded-full border px-4 py-2 text-sm ${
-                      watch("experienceLevel") === opt.value ? "border-primary bg-primary/5" : "border-border"
+                    className={`cursor-pointer rounded-full border px-4 py-2 text-sm transition-colors ${
+                      watch("experienceLevel") === opt.value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40"
                     }`}
                   >
                     <RadioGroupItem value={opt.value} id={`exp-${opt.value}`} className="sr-only" />
@@ -226,8 +260,8 @@ export default function NewAnalysisPage() {
                   <Label
                     key={opt.value}
                     htmlFor={`hrs-${opt.value}`}
-                    className={`cursor-pointer rounded-full border px-4 py-2 text-sm ${
-                      watch("weeklyHours") === opt.value ? "border-primary bg-primary/5" : "border-border"
+                    className={`cursor-pointer rounded-full border px-4 py-2 text-sm transition-colors ${
+                      watch("weeklyHours") === opt.value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40"
                     }`}
                   >
                     <RadioGroupItem value={opt.value} id={`hrs-${opt.value}`} className="sr-only" />
@@ -251,7 +285,7 @@ export default function NewAnalysisPage() {
 
             <label
               htmlFor="cv-upload"
-              className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border p-8 text-center hover:bg-muted/50"
+              className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border p-8 text-center transition-colors hover:border-primary/40 hover:bg-muted/50"
             >
               <UploadCloud className="h-6 w-6 text-muted-foreground" />
               <span className="text-sm font-medium">
@@ -287,7 +321,7 @@ export default function NewAnalysisPage() {
         )}
 
         {step === 2 && (
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div className="flex items-center justify-between">
               <Label>Job description</Label>
               <Button type="button" variant="outline" size="sm" onClick={useJobTemplate} className="gap-1.5">
@@ -299,20 +333,17 @@ export default function NewAnalysisPage() {
               than using a template alone.
             </p>
             <Textarea
-              rows={14}
+              rows={12}
               placeholder="Paste the full job description here…"
               {...register("jobDescriptionText")}
             />
             {formState.errors.jobDescriptionText && (
               <p className="text-sm text-destructive">{formState.errors.jobDescriptionText.message}</p>
             )}
-          </div>
-        )}
 
-        {step === 3 && (
-          <div className="space-y-4">
-            <div className="rounded-xl border border-border p-5">
-              <dl className="space-y-3 text-sm">
+            <div className="rounded-xl border border-border bg-muted/30 p-5">
+              <p className="mb-3 text-sm font-medium">Ready to submit</p>
+              <dl className="space-y-2.5 text-sm">
                 <div className="flex justify-between">
                   <dt className="text-muted-foreground">Target role</dt>
                   <dd className="font-medium">{ROLE_LIST.find((r) => r.id === targetRole)?.label}</dd>
@@ -338,10 +369,10 @@ export default function NewAnalysisPage() {
                   <dd className="font-medium">{watch("jobDescriptionText").length.toLocaleString()} characters</dd>
                 </div>
               </dl>
+              <p className="mt-4 border-t border-border pt-3 text-xs text-muted-foreground">
+                This score is a learning and preparation indicator. It is not a hiring decision.
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              This score is a learning and preparation indicator. It is not a hiring decision.
-            </p>
           </div>
         )}
 
@@ -354,7 +385,7 @@ export default function NewAnalysisPage() {
             <span />
           )}
 
-          {step < STEP_LABELS.length - 1 ? (
+          {step < STEPS.length - 1 ? (
             <Button type="button" onClick={goNext} className="gap-1.5">
               Continue <ArrowRight className="h-4 w-4" />
             </Button>
@@ -365,6 +396,41 @@ export default function NewAnalysisPage() {
           )}
         </div>
       </form>
+    </div>
+  );
+}
+
+function Stepper({ step }: { step: number }) {
+  return (
+    <div>
+      <div className="flex items-center">
+        {STEPS.map((s, i) => (
+          <div key={s.label} className="flex flex-1 items-center last:flex-none">
+            <div className="flex flex-col items-center gap-1.5">
+              <div
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-medium transition-colors ${
+                  i < step
+                    ? "bg-matched text-matched-foreground"
+                    : i === step
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {i < step ? <Check className="h-4 w-4" /> : <s.icon className="h-4 w-4" />}
+              </div>
+              <span
+                className={`hidden text-xs font-medium sm:block ${i <= step ? "text-foreground" : "text-muted-foreground"}`}
+              >
+                {s.label}
+              </span>
+            </div>
+            {i < STEPS.length - 1 && (
+              <div className={`mx-2 h-px flex-1 transition-colors ${i < step ? "bg-matched" : "bg-border"}`} />
+            )}
+          </div>
+        ))}
+      </div>
+      <p className="mt-3 text-sm font-medium text-muted-foreground sm:hidden">{STEPS[step].label}</p>
     </div>
   );
 }

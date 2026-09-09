@@ -1,7 +1,6 @@
-import { ShieldCheck, Trash2, ScrollText } from "lucide-react";
+import { ShieldCheck, Trash2, ScrollText, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
 
 const points = [
   {
@@ -27,8 +26,10 @@ export function TrustAndCta() {
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
         <div className="grid gap-6 sm:grid-cols-3">
           {points.map((p) => (
-            <div key={p.title} className="flex gap-3">
-              <p.icon className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+            <div key={p.title} className="flex gap-3.5 rounded-2xl border border-border bg-card p-5">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-success/10 text-success">
+                <p.icon className="h-5 w-5" />
+              </div>
               <div>
                 <h3 className="font-medium">{p.title}</h3>
                 <p className="mt-1 text-sm text-muted-foreground">{p.body}</p>
@@ -37,14 +38,14 @@ export function TrustAndCta() {
           ))}
         </div>
 
-        <div className="mt-16 rounded-3xl border border-border bg-gradient-to-br from-primary/[0.06] to-transparent p-10 text-center">
-          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+        <div className="mt-16 overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-primary/[0.08] via-ai/[0.05] to-transparent p-10 text-center sm:p-14">
+          <h2 className="text-2xl font-bold tracking-tight text-balance sm:text-3xl">
             Know exactly what to learn for the role you want.
           </h2>
-          <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
+          <p className="mx-auto mt-3 max-w-xl text-muted-foreground" dir="rtl">
             بطل تاخد كورسات عشوائية — اعرف بالضبط إيه الناقص عليك للوظيفة اللي عايزها.
           </p>
-          <Button size="lg" className="mt-6 gap-2" asChild>
+          <Button size="lg" className="mt-7 gap-2 shadow-lg shadow-primary/20" asChild>
             <Link href="/sign-up">
               Get My Free Skill Gap Snapshot <ArrowRight className="h-4 w-4" />
             </Link>

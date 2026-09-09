@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isSafeHttpUrl } from "@/lib/security/url";
 
 export const targetRoleSchema = z.enum([
   "JUNIOR_FRONTEND_DEVELOPER",
@@ -45,7 +46,12 @@ export type ConfirmSkillsInput = z.infer<typeof confirmSkillsSchema>;
 
 export const updateTaskSchema = z.object({
   status: z.enum(["PENDING", "IN_PROGRESS", "COMPLETE"]).optional(),
-  evidenceUrl: z.string().url().max(500).nullable().optional(),
+  evidenceUrl: z
+    .string()
+    .max(500)
+    .refine(isSafeHttpUrl, "Evidence link must be a valid http(s) URL")
+    .nullable()
+    .optional(),
   evidenceType: z.enum(["GITHUB", "DEMO_URL", "PORTFOLIO_URL", "CASE_STUDY", "NOTE"]).nullable().optional(),
   notes: z.string().max(1000).nullable().optional(),
 });
