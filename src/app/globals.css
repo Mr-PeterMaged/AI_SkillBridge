@@ -152,6 +152,7 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-sans), "Segoe UI", "Noto Sans Arabic", "Tahoma", Arial, sans-serif;
   }
   html {
     @apply font-sans;

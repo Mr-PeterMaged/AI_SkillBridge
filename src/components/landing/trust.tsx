@@ -3,12 +3,13 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/motion/reveal";
 import { StaggerGroup, StaggerItem } from "@/components/motion/stagger";
+import { POSITIONING_COPY, textDirection } from "@/lib/i18n/config";
 
 const points = [
   {
     icon: ShieldCheck,
     title: "Your CV is private",
-    body: "It's used only to generate your personal analysis — never to train a public model.",
+    body: "It's used only to generate your personal analysis - never to train a public model.",
   },
   {
     icon: Trash2,
@@ -18,7 +19,7 @@ const points = [
   {
     icon: ScrollText,
     title: "Guidance, not a verdict",
-    body: "SkillBridge AI provides career guidance and preparation indicators — never a hiring decision.",
+    body: "SkillBridge AI provides career guidance and preparation indicators - never a hiring decision.",
   },
 ];
 
@@ -49,8 +50,12 @@ export function TrustAndCta() {
           <h2 className="text-2xl font-bold tracking-tight text-balance sm:text-3xl">
             Know exactly what to learn for the role you want.
           </h2>
-          <p className="mx-auto mt-3 max-w-xl text-muted-foreground" dir="rtl">
-            بطل تاخد كورسات عشوائية — اعرف بالضبط إيه الناقص عليك للوظيفة اللي عايزها.
+          <p
+            className="mx-auto mt-3 max-w-xl text-muted-foreground"
+            dir={textDirection("ar")}
+            lang="ar"
+          >
+            {POSITIONING_COPY.ar}
           </p>
           <Button size="lg" className="mt-7 gap-2 shadow-lg shadow-primary/20" asChild>
             <Link href="/sign-up">
