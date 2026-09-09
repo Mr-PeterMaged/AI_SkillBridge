@@ -29,7 +29,9 @@ export function GapCard({
   evidenceQuote?: string;
 }) {
   return (
-    <div className={`rounded-xl border p-4 ${PRIORITY_STYLES[gap.priority]}`}>
+    <div
+      className={`rounded-xl border p-4 transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-md ${PRIORITY_STYLES[gap.priority]}`}
+    >
       <div className="flex items-center justify-between gap-2">
         <span className="font-medium">{gap.skillName}</span>
         <Badge className={PRIORITY_BADGE[gap.priority]}>{PRIORITY_LABEL[gap.priority]}</Badge>

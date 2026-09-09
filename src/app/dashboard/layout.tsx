@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Plus, Settings } from "lucide-react";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -26,6 +27,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <Settings className="h-4 w-4" />
               </Link>
             </Button>
+            <ThemeToggle />
             <UserButton />
           </div>
         </div>

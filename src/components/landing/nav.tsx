@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Show, UserButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export function LandingNav() {
   return (
@@ -19,7 +20,8 @@ export function LandingNav() {
           <Link href="/pricing" className="hover:text-foreground">Pricing</Link>
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
           <Show when="signed-out">
             <Button variant="ghost" asChild>
               <Link href="/sign-in">Sign in</Link>

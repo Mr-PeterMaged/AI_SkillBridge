@@ -4,6 +4,7 @@ import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Check, Clock, ExternalLink, Link2, Target, Trophy } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -122,8 +123,15 @@ export default function RoadmapPage({ params }: { params: Promise<{ id: string }
       </div>
 
       <div className="space-y-6">
-        {analysis.roadmap.weeks.map((week) => (
-          <WeekCard key={week.id} analysisId={id} week={week} onUpdateTask={updateTaskLocal} />
+        {analysis.roadmap.weeks.map((week, i) => (
+          <motion.div
+            key={week.id}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: Math.min(i * 0.08, 0.4), ease: [0.16, 1, 0.3, 1] }}
+          >
+            <WeekCard analysisId={id} week={week} onUpdateTask={updateTaskLocal} />
+          </motion.div>
         ))}
       </div>
 
@@ -273,7 +281,18 @@ function TaskRow({
           }`}
           aria-label={isComplete ? "Mark incomplete" : "Mark complete"}
         >
-          {isComplete && <Check className="h-3 w-3" />}
+          <AnimatePresence>
+            {isComplete && (
+              <motion.span
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 500, damping: 24 }}
+              >
+                <Check className="h-3 w-3" />
+              </motion.span>
+            )}
+          </AnimatePresence>
         </button>
         <div className="flex-1">
           <p className={`text-sm font-medium ${isComplete ? "text-muted-foreground line-through" : ""}`}>
