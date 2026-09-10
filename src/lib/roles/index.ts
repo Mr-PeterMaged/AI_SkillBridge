@@ -9,6 +9,12 @@ import { qaTestEngineer } from "./qa-test";
 import { devopsEngineer } from "./devops";
 import { uiUxDesigner } from "./ui-ux-designer";
 import { digitalMarketingSpecialist } from "./digital-marketing";
+import { cybersecurityAnalyst } from "./cybersecurity";
+import { cloudEngineer } from "./cloud-engineer";
+import { dataEngineer } from "./data-engineer";
+import { productManager } from "./product-manager";
+import { technicalWriter } from "./technical-writer";
+import { itSupportSpecialist } from "./it-support";
 
 export * from "./types";
 
@@ -22,6 +28,12 @@ export const ROLE_TEMPLATES: Record<TargetRole, RoleTemplate> = {
   DEVOPS_ENGINEER: devopsEngineer,
   UI_UX_DESIGNER: uiUxDesigner,
   DIGITAL_MARKETING_SPECIALIST: digitalMarketingSpecialist,
+  CYBERSECURITY_ANALYST: cybersecurityAnalyst,
+  CLOUD_ENGINEER: cloudEngineer,
+  DATA_ENGINEER: dataEngineer,
+  PRODUCT_MANAGER: productManager,
+  TECHNICAL_WRITER: technicalWriter,
+  IT_SUPPORT_SPECIALIST: itSupportSpecialist,
 };
 
 export const ROLE_LIST = Object.values(ROLE_TEMPLATES);

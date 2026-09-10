@@ -37,7 +37,11 @@ export type RoleCategory =
   | "Quality & DevOps"
   | "Design"
   | "Data"
-  | "Marketing & Growth";
+  | "Marketing & Growth"
+  | "Security"
+  | "Product & Program"
+  | "Content & Documentation"
+  | "IT & Support";
 
 export type RoleTemplate = {
   id: TargetRole;
