@@ -1,6 +1,6 @@
 import type { BillingInterval, Plan } from "@prisma/client";
 
-export const PLAN_CODES = ["FREE", "STARTER", "PRO", "JOB_SPRINT"] as const;
+export const PLAN_CODES = ["FREE", "STARTER", "PRO", "ANNUAL_STUDENT", "JOB_SPRINT"] as const;
 export type PlanCode = (typeof PLAN_CODES)[number];
 
 export type BillingType = "FREE" | "RECURRING" | "ONE_TIME";
@@ -58,6 +58,22 @@ const FREE_ENTITLEMENTS: PlanEntitlements = {
   jobSpecificRoadmaps: false,
   limitedJobDescriptionTemplates: true,
   topPriorityGaps: 3,
+};
+
+const PRO_ENTITLEMENTS: PlanEntitlements = {
+  ...FREE_ENTITLEMENTS,
+  analysesPerCycle: 50,
+  analysisLimitLabel: "Unlimited analyses under fair-use policy",
+  fullRoadmap: true,
+  roadmapPreview: false,
+  curatedResources: true,
+  progressTracking: true,
+  projectBuilder: true,
+  evidenceBuilder: true,
+  reassessment: true,
+  fullAnalysisHistory: true,
+  jobSpecificRoadmaps: true,
+  topPriorityGaps: null,
 };
 
 export const PLAN_CONFIG = {
@@ -131,27 +147,38 @@ export const PLAN_CONFIG = {
       analysisStartsPerHour: 5,
       label: "Unlimited analyses under fair-use policy",
     },
-    entitlements: {
-      ...FREE_ENTITLEMENTS,
-      analysesPerCycle: 50,
-      analysisLimitLabel: "Unlimited analyses under fair-use policy",
-      fullRoadmap: true,
-      roadmapPreview: false,
-      curatedResources: true,
-      progressTracking: true,
-      projectBuilder: true,
-      evidenceBuilder: true,
-      reassessment: true,
-      fullAnalysisHistory: true,
-      jobSpecificRoadmaps: true,
-      topPriorityGaps: null,
-    },
+    entitlements: PRO_ENTITLEMENTS,
     features: [
       "Unlimited analyses under fair-use policy",
       "Job-specific roadmaps",
       "Portfolio Evidence Builder",
       "Reassessment and before/after score",
       "Full analysis history",
+    ],
+  },
+  ANNUAL_STUDENT: {
+    code: "ANNUAL_STUDENT",
+    id: "ANNUAL_STUDENT",
+    name: "Annual",
+    tagline: "Everything in Pro, billed once a year",
+    billingType: "RECURRING",
+    billingInterval: "YEARLY",
+    pricePiastres: 149900,
+    currency: "EGP",
+    priceLabel: "1,499 EGP/year",
+    cta: "Go Annual",
+    paid: true,
+    fairUse: {
+      successfulAnalysesPerCycle: 50,
+      analysisStartsPerHour: 5,
+      label: "Unlimited analyses under fair-use policy",
+    },
+    entitlements: PRO_ENTITLEMENTS,
+    features: [
+      "Everything in Pro",
+      "Billed once a year instead of monthly",
+      "Save vs. paying for Pro month to month",
+      "Same monthly fair-use analysis allowance",
     ],
   },
   JOB_SPRINT: {

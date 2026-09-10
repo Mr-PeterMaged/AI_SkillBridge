@@ -244,6 +244,11 @@ export function subscriptionEndFor(plan: Plan, activationDate: Date) {
   if (plan === "JOB_SPRINT") {
     return new Date(activationDate.getTime() + 30 * 24 * 60 * 60 * 1000);
   }
+  if (plan === "ANNUAL_STUDENT") {
+    const end = new Date(activationDate);
+    end.setFullYear(end.getFullYear() + 1);
+    return end;
+  }
   const end = new Date(activationDate);
   end.setMonth(end.getMonth() + 1);
   return end;

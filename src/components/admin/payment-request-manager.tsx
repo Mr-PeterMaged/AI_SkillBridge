@@ -37,7 +37,7 @@ type PaymentRequest = {
 };
 
 const statuses = ["all", "PENDING_PAYMENT", "UNDER_REVIEW", "APPROVED", "REJECTED", "CANCELLED", "EXPIRED"];
-const plans = ["all", "STARTER", "PRO", "JOB_SPRINT"];
+const plans = ["all", "STARTER", "PRO", "ANNUAL_STUDENT", "JOB_SPRINT"];
 const rejectionReasons = [
   "Amount not matched",
   "Transfer could not be verified",
@@ -263,7 +263,12 @@ export function PaymentRequestManager() {
 function DetailRows({ request }: { request: PaymentRequest }) {
   const plan = getPlan(toPlanCode(request.selectedPlan as Plan));
   const start = new Date();
-  const end = plan.code === "JOB_SPRINT" ? new Date(start.getTime() + 30 * 24 * 60 * 60 * 1000) : addMonth(start);
+  const end =
+    plan.code === "JOB_SPRINT"
+      ? new Date(start.getTime() + 30 * 24 * 60 * 60 * 1000)
+      : plan.code === "ANNUAL_STUDENT"
+        ? addYear(start)
+        : addMonth(start);
   return (
     <dl className="space-y-2 rounded-lg border border-border p-3 text-sm">
       <Row label="User email" value={request.userEmailSnapshot} />
@@ -319,6 +324,12 @@ function formatDate(value: string) {
 function addMonth(date: Date) {
   const next = new Date(date);
   next.setMonth(next.getMonth() + 1);
+  return next;
+}
+
+function addYear(date: Date) {
+  const next = new Date(date);
+  next.setFullYear(next.getFullYear() + 1);
   return next;
 }
 

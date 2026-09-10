@@ -20,7 +20,7 @@ export const promoStatusSchema = z.enum(["ACTIVE", "PAUSED", "ARCHIVED"]);
 export const campaignStatusSchema = z.enum(["ACTIVE", "PAUSED", "ARCHIVED"]);
 export const ambassadorStatusSchema = z.enum(["ACTIVE", "PAUSED", "ARCHIVED"]);
 
-export const planSchema = z.enum(["FREE", "STARTER", "PRO", "JOB_SPRINT"]);
+export const planSchema = z.enum(["FREE", "STARTER", "PRO", "ANNUAL_STUDENT", "JOB_SPRINT"]);
 
 const nullableDateSchema = z
   .string()

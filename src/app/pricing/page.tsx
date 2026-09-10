@@ -26,8 +26,8 @@ export default function PricingPage() {
           </Suspense>
 
           <p className="mx-auto mt-10 max-w-2xl text-center text-xs text-muted-foreground">
-            Pro analyses are unlimited under a fair-use policy enforced on the server. Job Sprint is a one-time
-            30-day access package, not a recurring subscription.
+            Pro and Annual analyses are unlimited under a fair-use policy enforced on the server, refreshed every
+            month. Job Sprint is a one-time 30-day access package, not a recurring subscription.
           </p>
         </section>
       </main>
@@ -38,8 +38,8 @@ export default function PricingPage() {
 
 function PricingSkeleton() {
   return (
-    <div className="mt-14 grid gap-6 lg:grid-cols-4">
-      {[0, 1, 2, 3].map((item) => (
+    <div className="mt-14 grid gap-6 lg:grid-cols-5">
+      {[0, 1, 2, 3, 4].map((item) => (
         <Skeleton key={item} className="h-[420px] rounded-lg" />
       ))}
     </div>

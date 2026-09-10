@@ -28,6 +28,27 @@ export function monthCycleFor(date = new Date()) {
   return { periodStart, periodEnd };
 }
 
+/**
+ * A yearly-billed subscription still grants a monthly analysis allowance
+ * (matching Pro's fair-use limit), so usage must reset every month rather
+ * than once for the whole year. Anchored to the subscription's start date
+ * so the monthly boundary lines up with when it actually began.
+ */
+export function monthlySubCycleFor(anchor: Date, now: Date) {
+  const monthsElapsed =
+    (now.getUTCFullYear() - anchor.getUTCFullYear()) * 12 + (now.getUTCMonth() - anchor.getUTCMonth()) -
+    (now.getUTCDate() < anchor.getUTCDate() ? 1 : 0);
+  const periodStart = addMonthsUTC(anchor, Math.max(monthsElapsed, 0));
+  const periodEnd = addMonthsUTC(anchor, Math.max(monthsElapsed, 0) + 1);
+  return { periodStart, periodEnd };
+}
+
+function addMonthsUTC(date: Date, months: number) {
+  const result = new Date(date);
+  result.setUTCMonth(result.getUTCMonth() + months);
+  return result;
+}
+
 export async function getActiveEntitlement(user: { id: string; plan: Plan }, now = new Date()): Promise<ActiveEntitlement> {
   await expireOldSubscriptions(user.id, now);
 
@@ -42,8 +63,13 @@ export async function getActiveEntitlement(user: { id: string; plan: Plan }, now
   });
 
   if (subscription) {
+    const planCode = toPlanCode(subscription.plan);
+    if (getPlan(planCode).billingInterval === "YEARLY") {
+      const { periodStart, periodEnd } = monthlySubCycleFor(subscription.startedAt, now);
+      return { plan: planCode, source: "SUBSCRIPTION", subscription, periodStart, periodEnd };
+    }
     return {
-      plan: toPlanCode(subscription.plan),
+      plan: planCode,
       source: "SUBSCRIPTION",
       subscription,
       periodStart: subscription.startedAt,

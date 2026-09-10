@@ -37,7 +37,7 @@ type Promo = {
 
 type Option = { id: string; name: string; publicHandle?: string; status: string };
 
-const plans = ["FREE", "STARTER", "PRO", "JOB_SPRINT"];
+const plans = ["FREE", "STARTER", "PRO", "ANNUAL_STUDENT", "JOB_SPRINT"];
 
 export function PromoCodeManager() {
   const [promos, setPromos] = useState<Promo[]>([]);

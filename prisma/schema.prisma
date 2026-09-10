@@ -47,6 +47,7 @@ enum Plan {
 
 enum BillingInterval {
   MONTHLY
+  YEARLY
   ONE_TIME
 }
 

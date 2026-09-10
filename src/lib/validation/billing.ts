@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { PLAN_CODES } from "@/lib/config/pricing";
 
-export const paidPlanSchema = z.enum(["STARTER", "PRO", "JOB_SPRINT"]);
+export const paidPlanSchema = z.enum(["STARTER", "PRO", "ANNUAL_STUDENT", "JOB_SPRINT"]);
 export const planCodeSchema = z.enum(PLAN_CODES);
 
 export const promoCodeSchema = z

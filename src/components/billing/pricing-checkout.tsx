@@ -148,7 +148,7 @@ export function PricingCheckout({ plans }: { plans: PlanConfig[] }) {
 
   return (
     <>
-      <div className="mt-14 grid gap-6 lg:grid-cols-4">
+      <div className="mt-14 grid gap-6 lg:grid-cols-5">
         {plans.map((item) => (
           <div
             key={item.code}
