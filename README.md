@@ -14,28 +14,50 @@ SkillBridge AI is an AI-powered career readiness platform that compares a studen
 |---|---|
 | [Proposal](./PROPOSAL.md) | Project problem, solution, AI usage, audience, and impact summary. |
 | [Business Model Canvas](./BMC.md) | BMC summary for partners, judges, mentors, and future pilots. |
+| [User Guide](./USER_GUIDE.md) | Step-by-step guide to using the platform, for students and admins. |
 | [License](./LICENSE.md) | Proprietary ownership and permitted reference-use terms. |
 
 ## Project Overview
 
-SkillBridge AI helps students and fresh graduates move from vague career advice to a practical, evidence-driven learning plan. A user uploads a CV or pastes profile text, adds a target job description, reviews AI-extracted skills, and receives a deterministic readiness indicator with matched, partial, and missing skills.
+SkillBridge AI helps students and fresh graduates move from vague career advice to a practical, evidence-driven learning plan. A user uploads a CV or pastes profile text, adds a target job description, reviews AI-extracted skills, and receives a deterministic readiness indicator with matched, partial, and missing skills — followed by a personalized roadmap, portfolio evidence tracking, skill quizzes, weekly check-ins, resume building, and application tracking.
 
-The MVP focuses on three initial roles: Junior Frontend Developer, Junior Backend Developer, and Junior Data Analyst.
+What launched as an MVP with three roles has grown into a curated, multi-track role library (see [Supported Roles](#supported-roles)), a full subscription/billing system with manual payment verification, and an admin dashboard with role-based access control for the team running the platform.
+
+## Supported Roles
+
+Each role has a hand-curated skill rubric (priorities, learning objectives, portfolio projects, resources, CV evidence examples, and a job description template) — not a generic keyword list. The library spans:
+
+- **Software Development** — Junior Frontend Developer, Junior Backend Developer, Full Stack Developer, Mobile App Developer.
+- **Quality & DevOps** — QA/Test Engineer, DevOps Engineer, Cloud Engineer.
+- **Data** — Junior Data Analyst, Data Engineer.
+- **Design** — UI/UX Designer.
+- **Marketing & Growth** — Digital Marketing Specialist.
+- **Security** — Cybersecurity Analyst.
+- **Product & Program** — Product Manager.
+- **Content & Documentation** — Technical Writer.
+- **IT & Support** — IT Support Specialist.
+
+The library is actively expanding toward broad coverage of the roles a CS or tech-adjacent student might realistically target.
 
 ## Key Features
 
 - CV upload or pasted profile text.
-- Job description input and role templates.
+- Job description input, with a searchable, category-grouped role picker and per-role templates.
 - AI-powered structured skill extraction.
 - User review and correction of extracted skills.
-- Deterministic readiness indicator.
-- Matched, partial, and missing skills.
-- Critical / important / nice-to-have priorities.
-- Personalized 4-week roadmap.
-- Practical mini-project recommendations.
-- GitHub, portfolio, and live-demo evidence tracking.
-- Privacy controls and analysis deletion.
-- Initial roles: Junior Frontend Developer, Junior Backend Developer, and Junior Data Analyst.
+- Deterministic readiness indicator, computed independently of the AI model.
+- Matched, partial, and missing skills, organized by critical / important / nice-to-have priority.
+- Personalized, hours-adjusted learning roadmap.
+- Portfolio Project Builder with GitHub/deliverable checklists tied to specific skill gaps.
+- Evidence Builder and reassessment — log real proof and watch your score update.
+- Skill verification quizzes.
+- Weekly check-ins that adapt the roadmap to actual progress.
+- Resume/CV bullet generation from logged evidence.
+- Job application tracker.
+- Free, Starter, Pro, Annual, and Job Sprint plans with manual InstaPay payment verification.
+- Promo codes, campaigns, and an ambassador/referral program.
+- Admin dashboard with 7-role RBAC, team invites, ownership transfer, and audit logging.
+- Privacy controls and analysis/account deletion.
 
 ## How It Works
 
@@ -65,6 +87,8 @@ Mini-Projects and Portfolio Evidence
 | AI | Google Gemini API with Structured Output |
 | Validation | Zod, React Hook Form |
 | CV Parsing | unpdf for PDF and mammoth for DOCX |
+| Animation / Theming | Framer Motion, next-themes |
+| Notifications | EmailJS (server-side payment request alerts) |
 | Deployment | Vercel |
 
 ## Architecture
@@ -152,14 +176,22 @@ NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=
 - [x] Core project architecture.
 - [x] CV and job-description analysis workflow.
 - [x] Skill-gap analysis and readiness indicator.
-- [x] Initial role templates.
 - [x] Roadmap progress tracking.
-- [ ] Portfolio evidence review.
+- [x] Portfolio Evidence Builder and reassessment.
+- [x] Portfolio Project Builder.
+- [x] Skill verification quizzes.
+- [x] Weekly check-ins and adaptive roadmaps.
+- [x] Resume/CV bullet builder.
+- [x] Job application tracker.
+- [x] Subscription plans and manual InstaPay payment verification.
+- [x] Promo codes, campaigns, and ambassador/referral program.
+- [x] Admin dashboard with RBAC, team invites, and audit logging.
+- [x] Expanded role library (15+ roles across 9 tracks, actively growing).
 - [ ] Arabic interface and bilingual CV testing.
 - [ ] PDF report export.
+- [ ] Automated payment processor integration.
 - [ ] InterviewAI integration for interview practice.
 - [ ] University career-center dashboard.
-- [ ] Expanded role templates and learning-resource library.
 
 ## Demo Scenario
 
@@ -172,12 +204,14 @@ Expected output:
 - Skill gaps such as TypeScript, REST APIs, testing, and deployment.
 - A four-week roadmap with a practical project that can produce GitHub, portfolio, and live-demo evidence.
 
-## Known MVP Limitations
+## Known Limitations
 
-- The current role taxonomy is intentionally limited to three launch roles.
+- The role library, while actively growing, does not yet cover every role a student
+  might target.
 - Arabic CV and job-description input has not been fully tested end-to-end.
 - PDF parsing may not work for scanned or image-only PDFs.
-- Payment and university administration workflows are outside the current MVP.
+- Payment verification is currently manual (InstaPay), not through an automated
+  payment processor.
 
 ## Team
 
