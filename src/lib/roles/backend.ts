@@ -2,6 +2,7 @@ import { RoleTemplate } from "./types";
 
 export const juniorBackendDeveloper: RoleTemplate = {
   id: "JUNIOR_BACKEND_DEVELOPER",
+  category: "Software Development",
   label: "Junior Backend Developer",
   shortLabel: "Backend",
   description:

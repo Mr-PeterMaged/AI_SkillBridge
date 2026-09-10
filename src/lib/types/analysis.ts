@@ -1,4 +1,5 @@
 // Shared client-side view types for analysis API responses.
+import type { TargetRole } from "@prisma/client";
 
 export type CandidateSkillDTO = {
   id: string;
@@ -145,7 +146,7 @@ export type WeeklyCheckInDTO = {
 
 export type AnalysisDTO = {
   id: string;
-  targetRole: "JUNIOR_FRONTEND_DEVELOPER" | "JUNIOR_BACKEND_DEVELOPER" | "JUNIOR_DATA_ANALYST";
+  targetRole: TargetRole;
   experienceLevel: string;
   weeklyHours: string;
   status: string;

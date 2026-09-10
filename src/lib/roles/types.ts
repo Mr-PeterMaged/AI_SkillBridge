@@ -1,3 +1,5 @@
+import type { TargetRole } from "@prisma/client";
+
 export type SkillPriority = "critical" | "important" | "nice_to_have";
 export type SkillCategory = "technical" | "tool" | "soft";
 
@@ -30,8 +32,16 @@ export type LearningResource = {
   skill: string; // canonical name
 };
 
+export type RoleCategory =
+  | "Software Development"
+  | "Quality & DevOps"
+  | "Design"
+  | "Data"
+  | "Marketing & Growth";
+
 export type RoleTemplate = {
-  id: "JUNIOR_FRONTEND_DEVELOPER" | "JUNIOR_BACKEND_DEVELOPER" | "JUNIOR_DATA_ANALYST";
+  id: TargetRole;
+  category: RoleCategory;
   label: string;
   shortLabel: string;
   description: string;

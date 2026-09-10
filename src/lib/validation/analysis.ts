@@ -1,11 +1,8 @@
 import { z } from "zod";
+import { TargetRole } from "@prisma/client";
 import { isSafeHttpUrl } from "@/lib/security/url";
 
-export const targetRoleSchema = z.enum([
-  "JUNIOR_FRONTEND_DEVELOPER",
-  "JUNIOR_BACKEND_DEVELOPER",
-  "JUNIOR_DATA_ANALYST",
-]);
+export const targetRoleSchema = z.nativeEnum(TargetRole);
 
 export const experienceLevelSchema = z.enum(["STUDENT", "FRESH_GRADUATE", "JUNIOR"]);
 export const weeklyHoursSchema = z.enum(["H3", "H5", "H8", "H10_PLUS"]);

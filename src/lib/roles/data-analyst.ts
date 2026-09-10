@@ -2,6 +2,7 @@ import { RoleTemplate } from "./types";
 
 export const juniorDataAnalyst: RoleTemplate = {
   id: "JUNIOR_DATA_ANALYST",
+  category: "Data",
   label: "Junior Data Analyst",
   shortLabel: "Data Analyst",
   description:

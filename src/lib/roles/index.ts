@@ -1,14 +1,27 @@
+import type { TargetRole } from "@prisma/client";
 import { RoleTemplate } from "./types";
 import { juniorFrontendDeveloper } from "./frontend";
 import { juniorBackendDeveloper } from "./backend";
 import { juniorDataAnalyst } from "./data-analyst";
+import { fullStackDeveloper } from "./full-stack";
+import { mobileAppDeveloper } from "./mobile";
+import { qaTestEngineer } from "./qa-test";
+import { devopsEngineer } from "./devops";
+import { uiUxDesigner } from "./ui-ux-designer";
+import { digitalMarketingSpecialist } from "./digital-marketing";
 
 export * from "./types";
 
-export const ROLE_TEMPLATES: Record<RoleTemplate["id"], RoleTemplate> = {
+export const ROLE_TEMPLATES: Record<TargetRole, RoleTemplate> = {
   JUNIOR_FRONTEND_DEVELOPER: juniorFrontendDeveloper,
   JUNIOR_BACKEND_DEVELOPER: juniorBackendDeveloper,
   JUNIOR_DATA_ANALYST: juniorDataAnalyst,
+  FULL_STACK_DEVELOPER: fullStackDeveloper,
+  MOBILE_APP_DEVELOPER: mobileAppDeveloper,
+  QA_TEST_ENGINEER: qaTestEngineer,
+  DEVOPS_ENGINEER: devopsEngineer,
+  UI_UX_DESIGNER: uiUxDesigner,
+  DIGITAL_MARKETING_SPECIALIST: digitalMarketingSpecialist,
 };
 
 export const ROLE_LIST = Object.values(ROLE_TEMPLATES);

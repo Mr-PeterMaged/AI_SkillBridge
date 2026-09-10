@@ -16,16 +16,18 @@ import {
   Briefcase,
   Sparkles,
   Check,
+  Search,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { LoadingSequence } from "@/components/analysis/loading-sequence";
-import { ROLE_LIST, getRoleTemplate } from "@/lib/roles";
+import { ROLE_LIST, getRoleTemplate, type RoleCategory } from "@/lib/roles";
 import { createAnalysisSchema, CreateAnalysisInput } from "@/lib/validation/analysis";
 
 const STEPS = [
@@ -63,6 +65,7 @@ export default function NewAnalysisPage() {
   const [submitting, setSubmitting] = useState(false);
   const [parsing, setParsing] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [roleSearch, setRoleSearch] = useState("");
 
   const form = useForm<CreateAnalysisInput>({
     resolver: zodResolver(createAnalysisSchema),
@@ -157,6 +160,20 @@ export default function NewAnalysisPage() {
     }
   }
 
+  const filteredRoles = ROLE_LIST.filter((role) => {
+    const query = roleSearch.trim().toLowerCase();
+    if (!query) return true;
+    return (
+      role.label.toLowerCase().includes(query) ||
+      role.description.toLowerCase().includes(query) ||
+      role.category.toLowerCase().includes(query)
+    );
+  });
+  const rolesByCategory = filteredRoles.reduce<Partial<Record<RoleCategory, typeof ROLE_LIST>>>((acc, role) => {
+    (acc[role.category] ??= []).push(role);
+    return acc;
+  }, {});
+
   function useJobTemplate() {
     const role = ROLE_LIST.find((r) => r.id === targetRole);
     if (role) {
@@ -225,26 +242,47 @@ export default function NewAnalysisPage() {
           <div className="space-y-6">
             <div>
               <Label className="mb-3 block text-base">Target role</Label>
+              <div className="relative mb-3">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={roleSearch}
+                  onChange={(e) => setRoleSearch(e.target.value)}
+                  placeholder="Search roles (e.g. mobile, design, marketing)…"
+                  className="pl-9"
+                />
+              </div>
               <RadioGroup
                 value={targetRole}
                 onValueChange={(v) => setValue("targetRole", v as CreateAnalysisInput["targetRole"], { shouldValidate: true })}
-                className="grid gap-3 sm:grid-cols-1"
+                className="max-h-[420px] space-y-4 overflow-y-auto rounded-xl border border-border/60 p-3"
               >
-                {ROLE_LIST.map((role) => (
-                  <Label
-                    key={role.id}
-                    htmlFor={role.id}
-                    className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${
-                      targetRole === role.id ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40"
-                    }`}
-                  >
-                    <RadioGroupItem value={role.id} id={role.id} className="mt-0.5" />
-                    <span>
-                      <span className="block font-medium">{role.label}</span>
-                      <span className="block text-sm text-muted-foreground">{role.description}</span>
-                    </span>
-                  </Label>
+                {Object.entries(rolesByCategory).map(([category, roles]) => (
+                  <div key={category}>
+                    <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {category}
+                    </p>
+                    <div className="grid gap-2.5">
+                      {roles!.map((role) => (
+                        <Label
+                          key={role.id}
+                          htmlFor={role.id}
+                          className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${
+                            targetRole === role.id ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40"
+                          }`}
+                        >
+                          <RadioGroupItem value={role.id} id={role.id} className="mt-0.5" />
+                          <span>
+                            <span className="block font-medium">{role.label}</span>
+                            <span className="block text-sm text-muted-foreground">{role.description}</span>
+                          </span>
+                        </Label>
+                      ))}
+                    </div>
+                  </div>
                 ))}
+                {filteredRoles.length === 0 && (
+                  <p className="p-4 text-sm text-muted-foreground">No roles match &quot;{roleSearch}&quot;.</p>
+                )}
               </RadioGroup>
             </div>
 

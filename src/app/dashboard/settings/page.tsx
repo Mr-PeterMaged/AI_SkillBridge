@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Trash2, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import type { TargetRole } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -11,7 +12,7 @@ import { getRoleTemplate } from "@/lib/roles";
 
 type AnalysisRow = {
   id: string;
-  targetRole: "JUNIOR_FRONTEND_DEVELOPER" | "JUNIOR_BACKEND_DEVELOPER" | "JUNIOR_DATA_ANALYST";
+  targetRole: TargetRole;
   status: string;
   readinessScore: number | null;
   createdAt: string;

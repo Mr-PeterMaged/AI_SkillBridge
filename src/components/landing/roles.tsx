@@ -7,7 +7,12 @@ import { Reveal } from "@/components/motion/reveal";
 import { StaggerGroup, StaggerItem } from "@/components/motion/stagger";
 import { hoverLift } from "@/lib/animations";
 
+const HIGHLIGHTED_ROLE_COUNT = 6;
+
 export function SupportedRoles() {
+  const highlighted = ROLE_LIST.slice(0, HIGHLIGHTED_ROLE_COUNT);
+  const remaining = ROLE_LIST.length - highlighted.length;
+
   return (
     <section id="roles" className="border-b border-border/60 bg-muted/30">
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
@@ -17,12 +22,13 @@ export function SupportedRoles() {
           </Badge>
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Focused, not generic</h2>
           <p className="mt-3 text-muted-foreground">
-            We start narrow and go deep — each role has a hand-curated skill rubric, not a generic keyword list.
+            Each role has a hand-curated skill rubric, not a generic keyword list — across software, design, QA,
+            DevOps, and marketing.
           </p>
         </Reveal>
 
         <StaggerGroup className="mt-12 grid gap-6 sm:grid-cols-3">
-          {ROLE_LIST.map((role) => (
+          {highlighted.map((role) => (
             <StaggerItem key={role.id}>
               <motion.div
                 {...hoverLift}
@@ -44,6 +50,12 @@ export function SupportedRoles() {
             </StaggerItem>
           ))}
         </StaggerGroup>
+
+        {remaining > 0 && (
+          <p className="mt-8 text-center text-sm text-muted-foreground">
+            +{remaining} more role{remaining === 1 ? "" : "s"} supported — pick yours when you start an analysis.
+          </p>
+        )}
       </div>
     </section>
   );
